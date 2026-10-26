@@ -20,6 +20,8 @@ const rgb = (c, a) => a == null ? `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})` : `
 const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 const shade = (c, k) => k >= 0 ? mixc(c, [255, 240, 220], k) : mixc(c, [20, 4, 2], -k);
 function mk(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; }
+// portal sürümünde çeviri (platform.js yoksa metin aynen kalır)
+const tr = (s) => (window.PF && window.PF.t ? window.PF.t(s) : s);
 
 // ------------------------------------------------------------------ constants (world units, y up)
 const PH = 100;          // bir set (tabak+bardak) yüksekliği
@@ -44,6 +46,24 @@ const PHASES = [
   return o;
 });
 const PHASE_LEN = 7;
+
+// bardak koleksiyonu: toplam dizilen bardakla açılır
+const SKINS = [
+  { name: 'Klasik', need: 0 },
+  { name: 'Çizgili', need: 30 },
+  { name: 'Lale', need: 80 },
+  { name: 'Nazar', need: 160 },
+  { name: 'Gümüş', need: 300 },
+  { name: 'Kobalt', need: 500 },
+];
+// günlük çay: her gün herkes için aynı kural + aynı bardak dizisi
+const DAILY = [
+  { name: 'Rüzgârlı Boğaz', drift: 1 },
+  { name: 'Telaşlı garson', T: .8 },
+  { name: 'Altın saat', gold: .38 },
+  { name: 'Geniş salınım', A: 1.22 },
+  { name: 'Lodos', drift: 1, T: .9 },
+];
 
 // ------------------------------------------------------------------ canvas / sizing
 const cv = $('c');
@@ -106,7 +126,47 @@ function softEllipse(g, x, y, rx, ry, color, a0) {
   g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, TAU); g.fill(); g.restore();
 }
 const TEA_H = 80;
-function makeGlass(tea, golden) {
+// koleksiyon desenleri (cam konturu içine kırpılmış halde çizilir)
+function decorate(g, skin) {
+  if (skin === 1) {
+    // çizgili: dikey kabartmalar
+    for (let i = -4; i <= 4; i++) { const a = i / 5; stripPath(g, a - .035, a + .035, 4, 90); g.fillStyle = `rgba(255,255,255,${.1 + (i < 0 ? .08 : 0)})`; g.fill(); }
+  } else if (skin === 2) {
+    // lale: gövde üstünde kırmızı lale, yanlarda küçükleri
+    const tulip = (x, y, s, sq) => {
+      g.save(); g.translate(x, y); g.scale(s * sq, s);
+      g.strokeStyle = '#3f7a3a'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(1, 7, 0, 12); g.stroke();
+      g.fillStyle = '#3f7a3a'; g.beginPath(); g.ellipse(-3, 8, 3.2, 1.2, -.6, 0, TAU); g.fill();
+      g.fillStyle = '#d23a2a';
+      g.beginPath(); g.moveTo(0, 1); g.bezierCurveTo(-7, -1, -6, -9, -4, -11); g.lineTo(-2, -6); g.lineTo(0, -12); g.lineTo(2, -6); g.lineTo(4, -11); g.bezierCurveTo(6, -9, 7, -1, 0, 1); g.fill();
+      g.fillStyle = 'rgba(255,220,160,0.55)'; g.beginPath(); g.ellipse(-2.4, -5, 1, 3, .3, 0, TAU); g.fill();
+      g.restore();
+    };
+    tulip(0, -62, 1, 1); tulip(-15, -64, .7, .55); tulip(15, -64, .7, .55);
+  } else if (skin === 3) {
+    // nazar boncuğu
+    const eye = (x, y, r, sq) => {
+      g.save(); g.translate(x, y); g.scale(sq, 1);
+      for (const [k, c] of [[1, '#1d4fa8'], [.7, '#f6f4ee'], [.48, '#5fb2e6'], [.24, '#141824']]) { g.fillStyle = c; g.beginPath(); g.arc(0, 0, r * k, 0, TAU); g.fill(); }
+      g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(-r * .3, -r * .3, r * .14, 0, TAU); g.fill();
+      g.restore();
+    };
+    eye(0, -63, 7.5, 1); eye(-16, -64, 5, .5); eye(16, -64, 5, .5);
+  } else if (skin === 4) {
+    // gümüş yaldız: ağız, bel ve dip bantları
+    const silver = g.createLinearGradient(-27, 0, 27, 0);
+    silver.addColorStop(0, '#6c7480'); silver.addColorStop(.35, '#ffffff'); silver.addColorStop(.55, '#b9c2cc'); silver.addColorStop(1, '#5a626c');
+    g.fillStyle = silver;
+    g.fillRect(-30, -93, 60, 7); g.fillRect(-30, -41, 60, 4); g.fillRect(-30, -5, 60, 5);
+    for (let i = -2; i <= 2; i++) { g.beginPath(); g.arc(i * 8, -72, 1.6, 0, TAU); g.fill(); }
+  } else if (skin === 5) {
+    // kobalt: mavi cam + beyaz nokta şeridi
+    g.fillStyle = 'rgba(40,86,210,0.34)'; g.fillRect(-30, -93, 60, 95);
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    for (let i = -3; i <= 3; i++) { g.beginPath(); g.arc(i * 6.4, -86, 1.3, 0, TAU); g.fill(); g.beginPath(); g.arc(i * 6.4 + 3.2, -82, 1, 0, TAU); g.fill(); }
+  }
+}
+function makeGlass(tea, golden, skin) {
   return sprite(64, 104, 32, 98, (g) => {
     // arka cam duvarı
     glassPath(g, 0, 0, 92, 3.4);
@@ -144,6 +204,7 @@ function makeGlass(tea, golden) {
     const gr2 = g.createLinearGradient(0, -TEA_H, 0, -92);
     gr2.addColorStop(0, 'rgba(255,255,255,0.05)'); gr2.addColorStop(1, 'rgba(255,255,255,0.16)');
     g.fillStyle = gr2; g.fillRect(-30, -92, 60, 12);
+    if (skin) decorate(g, skin);
     g.restore();
     // kontur
     glassPath(g, 0, 0, 92, 3.4);
@@ -269,7 +330,7 @@ function makeSpark() {
   return c;
 }
 function buildSprites() {
-  SPR.glass = TEA.map((t) => makeGlass(t, false));
+  SPR.glass = TEA.map((t) => makeGlass(t, false, G.skin));
   SPR.glassGold = makeGlass(hex('#a8381c'), true);
   SPR.saucer = makeSaucer(false);
   SPR.saucerGold = makeSaucer(true);
@@ -495,7 +556,37 @@ const G = {
   cam: { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 }, shake: 0, flash: 0,
   phase: 0, phaseFrom: 0, phaseT: 1, overAt: 0, spawnIn: 0, lastGolden: false,
   tutorial: store.get('ck_tut', '0') !== '1', tutDone: 0,
+  mode: 'classic', mod: null, ph0: 0, revived: false, cupsOpen: false,
+  total: parseInt(store.get('ck_total', '0'), 10) || 0, skin: parseInt(store.get('ck_skin', '0'), 10) || 0,
 };
+G.shownTotal = G.total;
+if (!(G.skin > 0 && G.skin < SKINS.length && G.total >= SKINS[G.skin].need)) G.skin = 0;
+let rng = Math.random;   // oyun akışı rastgeleliği (günlük modda tohumlu)
+
+// ------------------------------------------------------------------ günlük çay
+function dayKey(d) { d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function dailyToday() {
+  const key = dayKey(), num = +key.replace(/-/g, '');
+  const r = seeded(num); r(); r();
+  return { key, num, mod: DAILY[r() * DAILY.length | 0], ph0: r() * PHASES.length | 0 };
+}
+function readPair(k) { const v = store.get(k, '').split('|'); return { key: v[0] || '', n: parseInt(v[1], 10) || 0 }; }
+function dailyBest() { const p = readPair('ck_daily'); return p.key === dayKey() ? p.n : 0; }
+function dailyStreak() {
+  // dün ya da bugün oynandıysa seri sürüyor
+  const p = readPair('ck_streak'), y = new Date(); y.setDate(y.getDate() - 1);
+  return p.key === dayKey() || p.key === dayKey(y) ? p.n : 0;
+}
+function markDailyPlayed() {
+  const p = readPair('ck_streak'), today = dayKey();
+  if (p.key === today) return;
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  store.set('ck_streak', today + '|' + (p.key === dayKey(y) ? p.n + 1 : 1));
+}
+function setupMode() {
+  if (G.mode === 'daily') { const d = dailyToday(); G.mod = d.mod; G.ph0 = d.ph0; rng = seeded(d.num * 7 + 1); }
+  else { G.mod = null; G.ph0 = 0; rng = Math.random; }
+}
 const parts = [], rings = [], floaters = [];
 let ferry = { x: -1, t: 6 }, gulls = [], gullTimer = 6;
 
@@ -506,14 +597,15 @@ function camMinY(z) { return -40 + (H * .80 - H * .5) / (S * (z || 1)); }
 function newPieceSpec() {
   const n = G.pieces.length;
   let golden = false;
-  if (n >= 3 && !G.lastGolden && Math.random() < .15) golden = true;
+  const gr = rng(), r = rng();
+  if (n >= 3 && !G.lastGolden && gr < ((G.mod && G.mod.gold) || .15)) golden = true;
   G.lastGolden = golden;
-  const r = Math.random();
   return { tea: r < .2 ? 0 : r < .62 ? 1 : r < .88 ? 2 : 3, golden };
 }
 function swingParams(n) {
-  const Ah = Math.min(152, 100 + n * 2.4);
-  const T = Math.max(1.12, 2.6 - n * .052);
+  const m = G.mod || {};
+  const Ah = Math.min(152, 100 + n * 2.4) * (m.A || 1);
+  const T = Math.max(1.12, 2.6 - n * .052) * (m.T || 1);
   return { A: Math.asin(Ah / L), T };
 }
 function spawnHang() {
@@ -530,7 +622,7 @@ function hangPos(h) {
 function resetWorld() {
   G.pieces.length = 0; G.bodies.length = 0; parts.length = 0; rings.length = 0; floaters.length = 0;
   G.drop = null; G.topple = null; G.score = 0; G.combo = 0; G.maxCombo = 0; G.perfects = 0; G.risk = 0; G.warned = false; G.recordShown = false;
-  G.lastGolden = false;
+  G.lastGolden = false; G.revived = false;
 }
 function demoTower() {
   resetWorld();
@@ -540,19 +632,23 @@ function demoTower() {
   G.phase = 0; G.phaseFrom = 0; G.phaseT = 1;
 }
 
-function startGame() {
+function startGame(mode) {
   Snd.init(); Snd.start();
+  if (mode) G.mode = mode;
+  setupMode();
   for (const p of G.pieces) burst(p.tx, G.pieces.indexOf(p) * PH + 50, 6, 'puff');
   resetWorld();
   G.state = 'playing';
-  G.phaseFrom = G.phase; G.phase = 0; G.phaseT = G.phaseFrom === 0 ? 1 : 0;
+  G.phaseFrom = G.phase; G.phase = G.ph0; G.phaseT = G.phaseFrom === G.phase ? 1 : 0;
   spawnHang();
   ui.score(0, false); ui.combo('');
+  if (G.mod) floater(0, 230, `${tr('Günlük çay')} · ${tr(G.mod.name)}`, '#ffe2a8', 22, true);
   show('title', false); show('over', false); show('pause', false); show('hud', true);
   show('tutorial', G.tutorial);
 }
 function tap() {
-  if (G.state === 'title') { startGame(); return; }
+  if (G.cupsOpen) return;
+  if (G.state === 'title') { startGame('classic'); return; }
   if (G.state === 'over') { if (performance.now() - G.overAt > 450) startGame(); return; }
   if (G.state !== 'playing') return;
   const h = G.hang;
@@ -575,6 +671,7 @@ function land() {
   G.pieces.push(piece);
   const st = stability();
   if (st.fail >= 0) { beginTopple(st.fail, st.side); return; }
+  G.total++; store.set('ck_total', G.total);
   // puan
   let gain = 1;
   if (perfect) {
@@ -607,7 +704,7 @@ function land() {
     G.recordShown = true; Snd.record(); floater(topX(), topY() + 160, 'Yeni rekor!', '#ffe08a', 30); confetti(30);
   }
   // evre
-  const ph = Math.floor(G.pieces.length / PHASE_LEN) % PHASES.length;
+  const ph = (G.ph0 + Math.floor(G.pieces.length / PHASE_LEN)) % PHASES.length;
   if (ph !== G.phase) { G.phaseFrom = currentPhaseBlend(); G.phase = ph; G.phaseT = 0; Snd.chime(); G.phaseBanner = { t: 0, text: PHASES[ph].name }; }
   // öğretici
   if (G.tutorial) { G.tutDone++; if (G.tutDone >= 2) { G.tutorial = false; store.set('ck_tut', '1'); show('tutorial', false); } }
@@ -663,18 +760,111 @@ function shatter(b) {
 }
 function endGame() {
   G.state = 'over'; G.overAt = performance.now();
-  const rec = G.score > G.best;
-  G.prevBest = G.best;
-  if (rec) { G.best = G.score; store.set('ck_best', G.best); }
+  const daily = G.mode === 'daily';
+  let rec;
+  if (daily) {
+    G.prevBest = dailyBest(); rec = G.score > G.prevBest;
+    if (rec) store.set('ck_daily', dayKey() + '|' + G.score);
+    markDailyPlayed();
+  } else {
+    rec = G.score > G.best;
+    G.prevBest = G.best;
+    if (rec) { G.best = G.score; store.set('ck_best', G.best); }
+  }
   $('finalScore').textContent = G.score;
-  $('statBest').textContent = G.best; $('statPerfect').textContent = G.perfects; $('statCombo').textContent = G.maxCombo;
+  $('statBest').textContent = daily ? Math.max(G.score, G.prevBest) : G.best; $('statPerfect').textContent = G.perfects; $('statCombo').textContent = G.maxCombo;
+  $('statBestLbl').textContent = tr(daily ? 'Bugün' : 'En iyi');
   $('overReason').textContent = G.single ? 'Bardak kaydı' : 'Kule devrildi';
   const firstRun = G.prevBest === 0;
   $('recordBadge').textContent = firstRun ? 'İlk kulen!' : 'Yeni rekor!';
+  if (daily) $('recordBadge').textContent = tr('Günün rekoru!');
   show('recordBadge', rec && G.score > 0);
+  $('overMode').textContent = daily ? `${tr('Günlük çay')} · ${tr(G.mod.name)} · ${tr('Seri')} ${dailyStreak()}` : '';
+  show('overMode', daily);
+  overUnlock();
+  // ikinci şans: koşu başına bir kez, yalnızca iyi giden bir koşuda (her ölümde değil)
+  const canRevive = !daily && !G.revived && G.pieces.length > 0 && G.score >= 10 && G.score >= G.prevBest * .5 && rewardReady();
+  $('reviveLbl').textContent = tr(window.PF ? 'Reklam izle, devam et' : 'İkinci şans');
+  $('reviveBtn').disabled = false;
+  show('reviveBtn', canRevive); show('reviveNote', false);
+  if (canRevive && window.PF && window.PF.offerReward) window.PF.offerReward();
   $('titleBest').querySelector('b').textContent = G.best;
+  refreshTitle();
   show('hud', false); show('tutorial', false); show('over', true);
   if (rec && G.score > 0) { setTimeout(() => { Snd.record(); confetti(60); }, 280); }
+}
+function rewardReady() { return !window.PF || !window.PF.canReward || window.PF.canReward(); }
+function revive() {
+  if (G.state !== 'over' || G.revived) return;
+  G.revived = true; G.bodies.length = 0; G.topple = null; G.toOverIn = 0; G.slow = 1;
+  straighten(.35); G.risk = stability().risk; G.warned = false; G.combo = 0;
+  G.state = 'playing';
+  show('over', false); show('hud', true);
+  spawnHang();
+  ui.score(G.score, true); ui.combo('');
+  G.flash = .8; Snd.chime(); vibrate([10, 40, 10]);
+  floater(topX(), topY() + PH + 60, tr('İkinci şans!'), '#ffe08a', 28, true);
+  if (window.PF && window.PF.gameplayStart) window.PF.gameplayStart();
+}
+function askRevive() {
+  if (G.state !== 'over' || G.revived) return;
+  const btn = $('reviveBtn'); btn.disabled = true;
+  const done = (ok) => {
+    btn.disabled = false;
+    if (ok) { revive(); return; }
+    show('reviveBtn', false); $('reviveNote').textContent = tr('Reklam şu an yok, sonra tekrar dene'); show('reviveNote', true);
+  };
+  if (window.PF && window.PF.rewarded) window.PF.rewarded(done); else done(true);
+}
+// oyun sonu: yeni açılan bardak ya da sıradakine kalan
+function overUnlock() {
+  const fresh = SKINS.filter((s) => s.need > G.shownTotal && s.need <= G.total);
+  G.shownTotal = G.total;
+  const el = $('unlockNote');
+  el.classList.toggle('new', fresh.length > 0);
+  if (fresh.length) { el.textContent = `${tr('Yeni bardak açıldı')}: ${fresh.map((s) => tr(s.name)).join(', ')}`; show('unlockNote', true); return; }
+  const next = SKINS.find((s) => s.need > G.total);
+  if (next) { el.textContent = `${tr('Sıradaki bardak')}: ${tr(next.name)} · ${next.need - G.total} ${tr('bardak kaldı')}`; show('unlockNote', true); }
+  else show('unlockNote', false);
+}
+function refreshTitle() {
+  const d = dailyToday(), best = dailyBest(), streak = dailyStreak();
+  let sub = tr(d.mod.name);
+  if (best) sub += ` · ${tr('Bugün')} ${best}`;
+  if (streak) sub += ` · ${tr('Seri')} ${streak}`;
+  $('dailySub').textContent = sub;
+  const fresh = SKINS.some((s, i) => i > 0 && s.need <= G.total && store.get('ck_seen' + i, '0') !== '1');
+  $('cupsBtn').classList.toggle('dot', fresh);
+}
+// koleksiyon paneli
+function openCups() {
+  if (G.state !== 'title') return;
+  G.cupsOpen = true; renderCups(); show('cups', true);
+}
+function closeCups() { G.cupsOpen = false; show('cups', false); refreshTitle(); }
+function renderCups() {
+  const grid = $('cupGrid'); grid.textContent = '';
+  $('cupTotal').textContent = `${tr('Toplam')} ${G.total} ${tr('bardak')}`;
+  SKINS.forEach((s, i) => {
+    const open = G.total >= s.need;
+    if (open) store.set('ck_seen' + i, '1');
+    const b = document.createElement('button');
+    b.className = 'cup' + (open ? '' : ' locked') + (G.skin === i ? ' on' : '');
+    b.setAttribute('aria-pressed', G.skin === i ? 'true' : 'false');
+    const sp = makeGlass(TEA[1], false, i), c = document.createElement('canvas');
+    c.width = sp.c.width; c.height = sp.c.height; c.getContext('2d').drawImage(sp.c, 0, 0);
+    const name = document.createElement('b'); name.textContent = tr(s.name);
+    const sub = document.createElement('span'); sub.textContent = open ? (G.skin === i ? tr('Seçili') : '') : `${s.need} ${tr('bardak')}`;
+    b.append(c, name, sub);
+    if (open) b.addEventListener('click', (e) => { e.stopPropagation(); selectSkin(i); Snd.init(); Snd.click(); });
+    grid.append(b);
+  });
+}
+function selectSkin(i) {
+  if (G.total < SKINS[i].need) return;
+  G.skin = i; store.set('ck_skin', i);
+  SPR.glass = TEA.map((t) => makeGlass(t, false, G.skin));
+  if (G.cupsOpen) renderCups();
 }
 
 // ------------------------------------------------------------------ effects
@@ -724,7 +914,8 @@ function update(dt) {
     h.theta = h.A * Math.sin(h.ph);
     const n = G.pieces.length;
     let target = topX();
-    if (n >= 10) target += Math.sin(G.t * .55) * Math.min(46, (n - 9) * 3.4);
+    const d0 = G.mod && G.mod.drift ? 1 : 10;
+    if (n >= d0) target += Math.sin(G.t * .55) * Math.min(46, (n - d0 + 1) * 3.4);
     h.px = lerp(h.px, target, 1 - Math.exp(-dt * 3));
     if (h.released || h.retract) { h.retract = Math.min(1, (h.retract || 0) + dt / .4); }
   }
@@ -1127,6 +1318,7 @@ function goHome() {
   show('pause', false); show('over', false); show('hud', false); show('tutorial', false);
   G.state = 'title'; G.phaseFrom = G.phase; demoTower(); G.phaseFrom = 0; G.phaseT = 1;
   $('titleBest').querySelector('b').textContent = G.best;
+  refreshTitle();
   show('title', true);
 }
 function syncMute() { document.body.classList.toggle('muted', Snd.muted); }
@@ -1144,10 +1336,14 @@ $('pauseBtn').addEventListener('click', (e) => { e.stopPropagation(); pause(); }
 $('resumeBtn').addEventListener('click', (e) => { e.stopPropagation(); resume(); });
 $('homeBtn').addEventListener('click', (e) => { e.stopPropagation(); goHome(); });
 $('againBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); startGame(); });
+$('reviveBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askRevive(); });
+$('dailyBtn').addEventListener('click', (e) => { e.stopPropagation(); if (G.state === 'title' && !G.cupsOpen) startGame('daily'); });
+$('cupsBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openCups(); });
+$('cupsClose').addEventListener('click', (e) => { e.stopPropagation(); closeCups(); });
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (G.state === 'paused') resume(); else { Snd.init(); tap(); } }
-  else if (e.code === 'KeyP' || e.code === 'Escape') { G.state === 'paused' ? resume() : pause(); }
+  else if (e.code === 'KeyP' || e.code === 'Escape') { if (G.cupsOpen) closeCups(); else G.state === 'paused' ? resume() : pause(); }
   else if (e.code === 'KeyM') { Snd.init(); Snd.toggle(); syncMute(); }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); Snd.suspend(); } });
@@ -1187,7 +1383,11 @@ window.__game = {
   get offset() { return G.hang ? hangPos(G.hang).x - topX() : null; },
   get fps() { return fps; },
   perf() { const r = { fps, avgWorkMs: workN ? workSum / workN : 0, dpr: DPR }; workSum = 0; workN = 0; return r; },
-  start: () => startGame(), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR,
+  get mode() { return G.mode; }, get total() { return G.total; }, get skin() { return G.skin; },
+  get canRevive() { const b = $('reviveBtn'); return G.state === 'over' && !b.classList.contains('hidden'); },
+  get daily() { return G.mod ? G.mod.name : null; }, get revived() { return G.revived; },
+  setTotal(n) { G.total = n; store.set('ck_total', n); }, selectSkin, revive: () => askRevive(), openCups, closeCups,
+  start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR,
   setTimeScale(s) { G.timeScale = s; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
   // tam ortada bırakmak için askıyı ortaya kadar ilerlet
@@ -1205,6 +1405,7 @@ window.__game = {
 resize();
 syncMute();
 $('titleBest').querySelector('b').textContent = G.best;
+refreshTitle();
 demoTower();
 G.cam.y = G.cam.ty = camMinY() - H * .07 / S; G.cam.x = 0;
 requestAnimationFrame(frame);

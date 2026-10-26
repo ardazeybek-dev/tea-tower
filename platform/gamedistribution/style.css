@@ -100,3 +100,36 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 #over .final span{font-size:76px}
 #over .record{margin:0 0 12px}
 #over .stats{margin:10px 0 14px}
+
+.modes{display:flex;gap:10px;width:min(340px,100%)}
+.mode-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 8px;border-radius:18px;position:relative;
+  background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:transform .12s}
+.mode-btn:active{transform:scale(.96)}
+.mode-btn b{font-weight:900;font-size:15px}
+.mode-btn small{font-size:11.5px;font-weight:700;opacity:.75;line-height:1.3;min-height:15px}
+.mode-btn.dot::after{content:"";position:absolute;top:8px;right:10px;width:9px;height:9px;border-radius:50%;background:#ffcf6a;box-shadow:0 0 0 3px rgba(255,207,106,.3)}
+
+.cups-panel{max-height:calc(100% - 8px);overflow:auto}
+.cups-panel h2{margin-bottom:4px}
+.cup-total{font-size:13px;font-weight:700;opacity:.6;margin-bottom:14px}
+.cup-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.cup{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px 8px;border-radius:16px;background:linear-gradient(180deg,#5a3a4a,#3a2232);
+  border:2px solid transparent;color:var(--cream);transition:transform .12s}
+.cup:active{transform:scale(.95)}
+.cup canvas{position:static;inset:auto;width:48px;height:78px;touch-action:auto}
+.cup b{font-size:13px;font-weight:900}
+.cup span{font-size:11px;font-weight:700;opacity:.75;min-height:14px}
+.cup.on{border-color:#f4c95d;box-shadow:0 0 0 3px rgba(244,201,93,.25)}
+.cup.locked{cursor:default}
+.cup.locked canvas{filter:grayscale(1) brightness(.45)}
+.cup.locked b{opacity:.55}
+
+.mode-tag{display:inline-block;margin-bottom:8px;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:800;color:#7a3a28;background:rgba(168,50,28,.1)}
+.unlock{margin:-4px 0 12px;font-size:13px;font-weight:800;color:#7a3a28;opacity:.8}
+.unlock.new{opacity:1;color:#8a5a00;padding:7px 10px;border-radius:12px;background:linear-gradient(90deg,#f4c95d,#ffe9a8,#f4c95d);background-size:200% 100%;animation:shine 1.6s linear infinite}
+#reviveBtn{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px}
+#reviveBtn:disabled{opacity:.6}
+.ad-ico{width:22px;height:22px;fill:#fff4e6;display:none}
+.pf-ads .ad-ico{display:block}
+.revive-note{margin:-2px 0 10px;font-size:13px;font-weight:700;color:#7a3a28}
+@media (max-height:880px){#title .tag{display:none}}

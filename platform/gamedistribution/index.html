@@ -42,6 +42,10 @@
     <p class="tag">İnce belli bardakları üst üste diz.<br>Tam ortaya denk getir, kule parlasın.</p>
     <div class="best-chip" id="titleBest">En iyi <b>0</b></div>
     <div class="cta"><span class="dot"></span>Başlamak için dokun</div>
+    <div class="modes">
+      <button id="dailyBtn" class="mode-btn"><b>Günlük çay</b><small id="dailySub"></small></button>
+      <button id="cupsBtn" class="mode-btn"><b>Bardaklar</b><small>Koleksiyon</small></button>
+    </div>
   </div>
 </div>
 
@@ -61,16 +65,30 @@
   </div>
 </div>
 
+<div id="cups" class="screen dim hidden">
+  <div class="panel cups-panel">
+    <div class="eyebrow">Koleksiyon</div>
+    <h2>Bardaklar</h2>
+    <p class="cup-total" id="cupTotal"></p>
+    <div class="cup-grid" id="cupGrid"></div>
+    <button id="cupsClose" class="btn primary">Kapat</button>
+  </div>
+</div>
+
 <div id="over" class="screen sheet hidden">
   <div class="panel">
+    <div class="mode-tag hidden" id="overMode"></div>
     <div class="eyebrow" id="overReason">Kule devrildi</div>
     <div class="final"><span id="finalScore">0</span><small>puan</small></div>
     <div class="record hidden" id="recordBadge">Yeni rekor!</div>
     <div class="stats">
-      <div><b id="statBest">0</b><span>En iyi</span></div>
+      <div><b id="statBest">0</b><span id="statBestLbl">En iyi</span></div>
       <div><b id="statPerfect">0</b><span>Mükemmel</span></div>
       <div><b id="statCombo">0</b><span>En uzun kombo</span></div>
     </div>
+    <div class="unlock hidden" id="unlockNote"></div>
+    <button id="reviveBtn" class="btn primary hidden"><svg class="ad-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="14" height="13" rx="3"/><path d="M17.5 10.2l4-2.4v8.4l-4-2.4z"/></svg><span id="reviveLbl">İkinci şans</span></button>
+    <div class="revive-note hidden" id="reviveNote"></div>
     <button id="againBtn" class="btn primary">Bir el daha</button>
     <div class="hint">ya da ekrana dokun</div>
   </div>

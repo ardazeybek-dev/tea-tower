@@ -24,7 +24,15 @@
     'Denge!': 'Balanced!', 'Dikkat, sallanıyor!': 'Careful, it wobbles!', 'Kombo': 'Combo',
     'V A K İ T': 'T I M E', 'İkindi': 'Afternoon', 'Gün batımı': 'Sunset', 'Gece': 'Night',
     'Şafak': 'Dawn', 'Sabah': 'Morning', 'Öğle': 'Noon',
-    'Duraklat': 'Pause', 'Sesi aç/kapat': 'Sound on/off', 'Çay Kulesi oyun alanı': 'Tea Tower game area'
+    'Duraklat': 'Pause', 'Sesi aç/kapat': 'Sound on/off', 'Çay Kulesi oyun alanı': 'Tea Tower game area',
+    'Günlük çay': 'Daily tea', 'Bardaklar': 'Glasses', 'Koleksiyon': 'Collection', 'Kapat': 'Close',
+    'Bugün': 'Today', 'Seri': 'Streak', 'Günün rekoru!': "Today's best!", 'Toplam': 'Total', 'bardak': 'glasses',
+    'Seçili': 'Selected', 'Yeni bardak açıldı': 'New glass unlocked', 'Sıradaki bardak': 'Next glass', 'bardak kaldı': 'to go',
+    'Klasik': 'Classic', 'Çizgili': 'Fluted', 'Lale': 'Tulip', 'Nazar': 'Evil Eye', 'Gümüş': 'Silver', 'Kobalt': 'Cobalt',
+    'Rüzgârlı Boğaz': 'Windy Bosphorus', 'Telaşlı garson': 'Hasty waiter', 'Altın saat': 'Golden hour',
+    'Geniş salınım': 'Wide swing', 'Lodos': 'Southwester',
+    'İkinci şans': 'Second chance', 'İkinci şans!': 'Second chance!', 'Reklam izle, devam et': 'Watch an ad to continue',
+    'Reklam şu an yok, sonra tekrar dene': 'No ad available right now, try again later'
   };
   var lang = 'en';
   try { var l = (navigator.languages && navigator.languages[0]) || navigator.language || ''; if (/^tr\b/i.test(l)) lang = 'tr'; } catch (e) {}
@@ -32,6 +40,7 @@
 
   function translateDom() {
     document.documentElement.lang = lang;
+    document.documentElement.classList.add('pf-ads');   // shows the video icon on the rewarded button
     if (lang !== 'en') { document.title = 'Çay Kulesi'; return; }
     document.title = 'Tea Tower';
     var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
@@ -44,6 +53,7 @@
   var game = null;           // { mute(bool), pauseInput(bool) } set by game.js
   var sdkMuted = false, inAd = false, playing = false, playSeconds = 0, playFrom = 0;
   var cg = null, gdReady = false, gdDone = null, adTimer = 0;
+  var rwDone = null, rwOk = false, offered = false;   // rewarded ad state, kept apart from the midgame break
 
   function setAdMute(on) { inAd = on; if (game) game.mute(on || sdkMuted); }
 
@@ -68,7 +78,8 @@
     switch (ev && ev.name) {
       case 'SDK_READY': gdReady = true; break;
       case 'SDK_GAME_PAUSE': clearTimeout(adTimer); setAdMute(true); break;
-      case 'SDK_GAME_START': setAdMute(false); finishAd(); break;
+      case 'SDK_GAME_START': setAdMute(false); if (rwDone) finishReward(); else finishAd(); break;
+      case 'SDK_REWARDED_WATCH_COMPLETE': rwOk = true; break;
     }
   }
   if (TARGET === 'gamedistribution') {
@@ -85,7 +96,9 @@
   }
   function adBreak(then) {
     then = then || function () {};
-    if (gdDone) return;                                   // already waiting for one
+    if (gdDone || rwDone) return;                         // already waiting for one
+    // a rewarded "keep playing" was offered on this game-over screen: no midgame ad on top of it
+    if (offered) { offered = false; then(); return; }
     if (playSeconds < MIN_PLAY_BEFORE_AD) { then(); return; }
     if (TARGET === 'crazygames' && cg && cg.environment !== 'disabled') {
       gdDone = then; if (game) game.pauseInput(true);
@@ -111,6 +124,43 @@
     then();
   }
 
+  // ---------------------------------------------------------------- rewarded ad
+  // The reward is granted only when the ad was watched to the end (CG adFinished,
+  // GD SDK_REWARDED_WATCH_COMPLETE). Errors, no fill and timeouts give nothing.
+  function canReward() {
+    if (TARGET === 'crazygames') return !!(cg && cg.environment !== 'disabled');
+    if (TARGET === 'gamedistribution') return !!(gdReady && window.gdsdk && typeof window.gdsdk.showAd === 'function');
+    return false;
+  }
+  function finishReward() {
+    clearTimeout(adTimer);
+    if (game) game.pauseInput(false);
+    setAdMute(false);
+    var cb = rwDone, ok = rwOk; rwDone = null; rwOk = false;
+    if (cb) cb(ok);
+  }
+  function rewarded(cb) {
+    offered = false;
+    if (rwDone || gdDone) return;
+    if (!canReward()) { cb(false); return; }
+    rwDone = cb; rwOk = false; if (game) game.pauseInput(true);
+    adTimer = setTimeout(finishReward, AD_TIMEOUT);
+    if (TARGET === 'crazygames') {
+      try {
+        cg.ad.requestAd('rewarded', {
+          adStarted: function () { clearTimeout(adTimer); setAdMute(true); },
+          adFinished: function () { rwOk = true; finishReward(); },
+          adError: function () { finishReward(); }
+        });
+      } catch (e) { finishReward(); }
+      return;
+    }
+    try {
+      var p = window.gdsdk.showAd('rewarded');
+      if (p && typeof p.then === 'function') p.then(function () { if (!inAd) finishReward(); }, function () { finishReward(); });
+    } catch (e) { finishReward(); }
+  }
+
   // ---------------------------------------------------------------- gameplay events
   function gameplayStart() {
     if (playing) return; playing = true; playFrom = performance.now();
@@ -131,6 +181,7 @@
     bind: function (g) { game = g; if (sdkMuted) g.mute(true); },
     loaded: function () { ready.then(function () { try { if (cg) cg.game.loadingStop(); } catch (e) {} }); },
     gameplayStart: gameplayStart, gameplayStop: gameplayStop, adBreak: adBreak, happy: happy,
+    canReward: canReward, rewarded: rewarded, offerReward: function () { offered = true; },
     translateDom: translateDom
   };
 })();

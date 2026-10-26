@@ -15,12 +15,18 @@ A one-thumb stacking game set on a tea terrace facing the Bosphorus. A brass tea
 - Every 7 glasses the time of day moves on: afternoon, sunset, night, dawn, morning, noon. The swing gets faster and wider as you climb, and from glass 10 the hanger starts to drift.
 - `P` / `Esc` pauses and `M` mutes. The game also pauses on its own when the tab is hidden.
 
+## Modes and progression
+
+- **Second chance:** after a good run (score at least 10 and at least half of your best) the game-over sheet offers one revive per run. The fallen glasses are cleared, the rest of the tower is straightened a little and the score is kept. On the portal builds this is a rewarded ad. On GitHub Pages it is free.
+- **Daily tea:** one run type per calendar day (local time), the same for everyone. It has a daily rule (windy hanger, hasty swing, golden hour, wide swing or southwester), a seeded glass sequence and a starting time of day. It keeps its own best score for the day and a streak of consecutive days. Second chance is off in this mode.
+- **Glass collection:** every glass you stack counts toward a lifetime total that unlocks new designs at 30, 80, 160, 300 and 500: fluted, tulip, evil eye, silver and cobalt. Pick one under *Glasses* on the title screen. Gilded bonus glasses always keep their gold look.
+
 ## Features
 
 - Canvas2D renderer with no build step and no dependencies. Every sprite (glasses, saucers, brass tray, kilim tablecloth, Istanbul skyline) is drawn in code and cached once per resolution.
 - All audio is synthesized with WebAudio: glass clinks, perfect-drop notes that rise along the Hicaz scale, a sea ambience and seagulls.
 - Installable PWA that works offline (manifest + service worker), with high-DPI rendering, safe-area insets and adaptive resolution.
-- Best score is saved in `localStorage`.
+- Best score, daily best and streak, lifetime glass count and the chosen design are saved in `localStorage` (`ck_*` keys).
 
 ## Run locally
 
@@ -35,7 +41,7 @@ The page must be served over http(s). Opening `index.html` as a file is not enou
 
 ## Portal builds
 
-`platform/build.py` generates portal copies from `docs/` without changing it: SDK hooks (gameplay start/stop, an ad break between game over and the next run with audio muted), English UI by default (Turkish when the browser language is Turkish), and no service worker, manifest or absolute links.
+`platform/build.py` generates portal copies from `docs/` without changing it: SDK hooks (gameplay start/stop, an ad break between game over and the next run with audio muted, a rewarded ad for the second chance), English UI by default (Turkish when the browser language is Turkish), and no service worker, manifest or absolute links.
 
 ```bash
 python platform/build.py                                   # platform/crazygames/ and platform/gamedistribution/
@@ -43,7 +49,7 @@ python platform/build.py gamedistribution --gd-id <ID>     # GameDistribution ne
 python platform/build.py --zip ../dist                     # also write upload-ready zips (index.html at the root)
 ```
 
-Edit the game in `docs/` and the adapter in `platform/src/platform.js`, then rebuild; never edit the generated folders. `?pf_minplay=0` skips the 60-second delay before the first ad (testing only).
+Edit the game in `docs/` and the adapter in `platform/src/platform.js`, then rebuild; never edit the generated folders. The reward is granted only after the ad has been watched to the end (CrazyGames `adFinished`, GameDistribution `SDK_REWARDED_WATCH_COMPLETE`). When a revive is offered and the player restarts instead, no midgame ad is shown for that restart. GameDistribution only serves rewarded ads after the rewarded flag is enabled for the game in its developer panel. `?pf_minplay=0` skips the 60-second delay before the first ad (testing only).
 
 ## Project structure
 
