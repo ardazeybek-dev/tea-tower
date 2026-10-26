@@ -6,7 +6,7 @@
   'use strict';
   var TARGET = 'gamedistribution';          // 'crazygames' | 'gamedistribution'
   var MIN_PLAY_BEFORE_AD = 60;        // seconds of real gameplay before the first ad break
-  var AD_TIMEOUT = 45000;             // never leave the player stuck if the SDK hangs
+  var AD_TIMEOUT = 8000;              // never leave the player stuck if the SDK hangs
   try { var mp = /[?&]pf_minplay=(\d+)/.exec(location.search); if (mp) MIN_PLAY_BEFORE_AD = +mp[1]; } catch (e) {}  // testing only
 
   // ---------------------------------------------------------------- language
