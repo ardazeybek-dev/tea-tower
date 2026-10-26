@@ -33,6 +33,18 @@ python -m http.server 8080 --directory docs
 
 The page must be served over http(s). Opening `index.html` as a file is not enough, because the service worker and fonts need an origin. No environment variables are required.
 
+## Portal builds
+
+`platform/build.py` generates portal copies from `docs/` without changing it: SDK hooks (gameplay start/stop, an ad break between game over and the next run with audio muted), English UI by default (Turkish when the browser language is Turkish), and no service worker, manifest or absolute links.
+
+```bash
+python platform/build.py                                   # platform/crazygames/ and platform/gamedistribution/
+python platform/build.py gamedistribution --gd-id <ID>     # GameDistribution needs the game ID from its panel
+python platform/build.py --zip ../dist                     # also write upload-ready zips (index.html at the root)
+```
+
+Edit the game in `docs/` and the adapter in `platform/src/platform.js`, then rebuild; never edit the generated folders. `?pf_minplay=0` skips the 60-second delay before the first ad (testing only).
+
 ## Project structure
 
 ```
@@ -45,12 +57,18 @@ docs/                 GitHub Pages root (main branch, /docs)
   fonts/              Fraunces + Nunito (OFL), latin + latin-ext subsets
   icons/              app icons (any + maskable)
   og.png, preview.png
+platform/
+  build.py            builds portal copies from docs/
+  src/platform.js     portal adapter (SDK calls, ad break, language)
+  crazygames/, gamedistribution/   generated output, do not edit
 ```
 
 ## Gotchas
 
 - Changes not showing after deploy → the service worker serves cached assets → bump `CACHE` in `docs/sw.js`.
 - Headless browser FPS looks very low → software rasterization at DPR 3 → measure with a GPU-backed browser. `window.__game.perf()` reports FPS and per-frame JS time.
+- `build.py` stops with "expected 1 match" → a line it patches in `docs/game.js` changed → update the matching `sub1` call in `build.py`.
+- Portal SDK logs "gameplayStart() call throttled" in tests → start/stop closer than 1 s → leave real time between rounds.
 - Automated tests are flaky on timing → headless rAF is throttled → drive the game with `window.__game.setTimeScale(0)` plus `step()`, `aimPerfect()` and `aimOffset(x)`.
 
 Fonts: Fraunces and Nunito, SIL Open Font License (see `docs/fonts/`).

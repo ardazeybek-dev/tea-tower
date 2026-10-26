@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Tea Tower</title>
+<meta name="description" content="Stack tulip-shaped Turkish tea glasses into a tower by the Bosphorus. One tap, perfect drops, endless combos.">
+<meta name="theme-color" content="#2a1d2e">
+<link rel="preload" href="fonts/fraunces-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="c" aria-label="Çay Kulesi oyun alanı"></canvas>
+
+<div id="hud" class="hidden">
+  <button id="pauseBtn" class="icon-btn" aria-label="Duraklat">
+    <svg viewBox="0 0 24 24"><rect x="6.5" y="5" width="3.6" height="14" rx="1.4"/><rect x="13.9" y="5" width="3.6" height="14" rx="1.4"/></svg>
+  </button>
+  <div id="scoreBox">
+    <div id="score">0</div>
+    <div id="combo"></div>
+  </div>
+  <button class="icon-btn soundBtn" aria-label="Sesi aç/kapat">
+    <svg class="on" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+    <svg class="off" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+  </button>
+</div>
+
+<div id="title" class="screen">
+  <div class="top-row">
+    <span></span>
+    <button class="icon-btn soundBtn" aria-label="Sesi aç/kapat">
+      <svg class="on" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+      <svg class="off" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+    </button>
+  </div>
+  <div class="logo">
+    <div class="eyebrow">Boğaz'a karşı</div>
+    <h1>Çay <em>Kulesi</em></h1>
+  </div>
+  <div class="bottom">
+    <p class="tag">İnce belli bardakları üst üste diz.<br>Tam ortaya denk getir, kule parlasın.</p>
+    <div class="best-chip" id="titleBest">En iyi <b>0</b></div>
+    <div class="cta"><span class="dot"></span>Başlamak için dokun</div>
+  </div>
+</div>
+
+<div id="tutorial" class="hidden">
+  <div class="tut-card">
+    <svg class="hand" viewBox="0 0 64 64" aria-hidden="true"><path d="M26 30V12a4 4 0 0 1 8 0v14l10.5 2.2a5 5 0 0 1 4 5.6L46.6 48a8 8 0 0 1-7.9 6.8H30a8 8 0 0 1-6.2-3L14.6 40.3a3.6 3.6 0 0 1 5-5.1L26 40z"/></svg>
+    <div><b>Bardak ortaya gelince dokun.</b><br>Tam ortası parlar, kule dengelenir.</div>
+  </div>
+</div>
+
+<div id="pause" class="screen dim hidden">
+  <div class="panel">
+    <div class="eyebrow">Mola</div>
+    <h2>Çay demleniyor…</h2>
+    <button id="resumeBtn" class="btn primary">Devam et</button>
+    <button id="homeBtn" class="btn ghost">Ana ekran</button>
+  </div>
+</div>
+
+<div id="over" class="screen sheet hidden">
+  <div class="panel">
+    <div class="eyebrow" id="overReason">Kule devrildi</div>
+    <div class="final"><span id="finalScore">0</span><small>puan</small></div>
+    <div class="record hidden" id="recordBadge">Yeni rekor!</div>
+    <div class="stats">
+      <div><b id="statBest">0</b><span>En iyi</span></div>
+      <div><b id="statPerfect">0</b><span>Mükemmel</span></div>
+      <div><b id="statCombo">0</b><span>En uzun kombo</span></div>
+    </div>
+    <button id="againBtn" class="btn primary">Bir el daha</button>
+    <div class="hint">ya da ekrana dokun</div>
+  </div>
+</div>
+
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<script src="platform.js"></script>
+<script src="game.js"></script>
+<script>PF.translateDom(); PF.loaded();</script>
+</body>
+</html>
