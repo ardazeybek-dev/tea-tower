@@ -1044,6 +1044,42 @@ function claimGift() {
   toast(`${tr('Günlük hediye')} <em>+${r}</em>`);
   checkAch(); renderGift(); refreshTitle();
 }
+// seri koruma: tek gün kaçtıysa (son kayıt evvelsi gün) seri şekerle kurtarılır
+function daysAgo(n) { const d = new Date(); d.setDate(d.getDate() - n); return dayKey(d); }
+const STREAKS = [{ k: 'ck_login', name: 'Hediye serisi' }, { k: 'ck_streak', name: 'Günlük çay serisi' }];
+const fixCost = (n) => Math.min(150, 40 + n * 10);
+function rescuable(k) { const p = readPair(k); return p.key === daysAgo(2) && p.n >= 2 ? p.n : 0; }
+function fixStreak(k, el) {
+  const n = rescuable(k); if (!n) return;
+  if (!Wallet.spend(fixCost(n))) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); Snd.click(); vibrate(30); return; }
+  store.set(k, daysAgo(1) + '|' + n);
+  Snd.record(); vibrate([20, 30, 20]); toast(`${tr('Seri kurtarıldı')} · <em>${n} ${tr('gün')}</em>`);
+  renderGift(); refreshTitle();
+}
+// haftalık hedefler: pazartesi başlar, günlük görevlerin üstüne daha büyük ödül
+const WEEK = [
+  { k: 'glass', t: 'Bu hafta {n} bardak diz', n: 300, r: 150 },
+  { k: 'days', t: 'Bu hafta {n} farklı gün oyna', n: 5, r: 200 },
+];
+function weekKey() { const d = new Date(); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return dayKey(d); }
+let WS = null;
+function week() {
+  if (WS && WS.key === weekKey()) return WS;
+  try { WS = JSON.parse(store.get('ck_week', 'null')); } catch (e) { WS = null; }
+  if (!WS || WS.key !== weekKey()) { WS = { key: weekKey(), p: [0, 0], done: [false, false], last: '' }; store.set('ck_week', JSON.stringify(WS)); }
+  return WS;
+}
+function weekText(i) { return tr(WEEK[i].t).replace('{n}', WEEK[i].n); }
+function weekEvent(k, v) {
+  const ws = week(); let changed = false;
+  if (k === 'runs' && ws.last !== dayKey()) { ws.last = dayKey(); k = 'days'; v = 1; }
+  WEEK.forEach((w, i) => {
+    if (w.k !== k || ws.done[i]) return;
+    ws.p[i] += v; changed = true;
+    if (ws.p[i] >= w.n) { ws.done[i] = true; Wallet.add(w.r); toast(`🗓️ ${weekText(i)} <em>+${w.r}</em>`); Snd.chime(); }
+  });
+  if (changed || k === 'days') store.set('ck_week', JSON.stringify(ws));
+}
 // çark: günde bir bedava, portallarda reklamla bir tane daha
 function spinsUsed() { const p = readPair('ck_spin'); return p.key === dayKey() ? p.n : 0; }
 function spinState() { const u = spinsUsed(); return { free: u < 1, extra: u === 1 && !!window.PF && rewardReady() }; }
@@ -1089,6 +1125,7 @@ function resetWorld() {
   G.pieces.length = 0; G.bodies.length = 0; parts.length = 0; rings.length = 0; floaters.length = 0;
   G.drop = null; G.topple = null; G.score = 0; G.combo = 0; G.maxCombo = 0; G.perfects = 0; G.risk = 0; G.warned = false; G.recordShown = false;
   G.lastGolden = false; G.revived = false; G.offerRevive = false; G.runSugar = 0;
+  G.recCrossed = false; G.recT = 0; G.mile = 0;
 }
 function demoTower() {
   resetWorld();
@@ -1102,6 +1139,8 @@ function startGame(mode) {
   Snd.init(); Snd.start();
   if (mode) G.mode = mode;
   setupMode();
+  // rekor şeridi koşu başındaki en yüksek kuleye sabitlenir (koşu içinde ST.bestH büyür)
+  G.bestH0 = G.mode === 'daily' ? 0 : ST.bestH;
   for (const p of G.pieces) burst(p.tx, G.pieces.indexOf(p) * PH + 50, 6, 'puff');
   resetWorld();
   G.state = 'playing';
@@ -1179,6 +1218,19 @@ function land() {
   G.risk = st2.risk;
   if (G.risk > .72 && !G.warned) { G.warned = true; Snd.creak(); floater(topX(), topY() + 120, T('Dikkat, sallanıyor!'), '#ffb4a0', 20); }
   if (G.risk < .5) G.warned = false;
+  // rekor yüksekliği geçildi: hafif kutlama (puan rekorunun konfetisiyle yarışmasın)
+  const h = G.pieces.length;
+  if (G.bestH0 >= 3 && !G.recCrossed && h > G.bestH0) {
+    G.recCrossed = true; G.recT = G.t; G.flash = 1; Snd.chime(); vibrate([12, 40, 12]);
+    rings.push({ x: piece.tx, y: ty + PH, t: 0, max: .9, r0: 40, r1: 180, golden: true });
+    floater(topX(), topY() + 200, tr('Rekor yükseklik!'), '#ffe08a', 26, true);
+  }
+  // her 25 katta bir kilometre taşı: şeker ödülü
+  if (h % 25 === 0 && h / 25 > G.mile) {
+    G.mile = h / 25; const b = 10 * G.mile;
+    G.runSugar += b; Wallet.add(b); Snd.record(); confetti(24); vibrate([15, 30, 15, 30, 15]);
+    floater(topX(), topY() + 240, `${tr('Kat')} ${h}! +${b}`, '#ffe08a', 30, true);
+  }
   // rekor
   if (G.best > 0 && G.score > G.best && !G.recordShown) {
     G.recordShown = true; Snd.record(); floater(topX(), topY() + 160, T('Yeni rekor!'), '#ffe08a', 30); confetti(30);
@@ -1258,7 +1310,11 @@ function endGame() {
   const firstRun = G.prevBest === 0;
   $('recordBadge').textContent = T(firstRun ? 'İlk kulen!' : 'Yeni rekor!');
   if (daily) $('recordBadge').textContent = tr('Günün rekoru!');
-  show('recordBadge', rec && G.score > 0);
+  // rekora az kaldıysa aynı rozette, sakin renkte söyle
+  const gap = G.prevBest - G.score, near = !rec && G.score > 0 && gap > 0 && gap <= Math.max(3, Math.ceil(G.prevBest * .2));
+  if (near) $('recordBadge').textContent = `${tr('Rekora')} ${gap} ${tr('puan kaldı!')}`;
+  $('recordBadge').classList.toggle('near', near);
+  show('recordBadge', (rec && G.score > 0) || near);
   $('overMode').textContent = daily ? `${tr('Günlük çay')} · ${tr(G.mod.name)} · ${tr('Seri')} ${dailyStreak()}` : '';
   show('overMode', daily);
   overUnlock();
@@ -1307,6 +1363,7 @@ function askRevive() {
 }
 // oyun sonu: yeni açılan bardak ya da sıradakine kalan
 function overUnlock() {
+  const before = G.shownTotal;
   const fresh = SKINS.filter((s, i) => s.need > G.shownTotal && s.need <= G.total && !owned.has(i));
   const freshV = VENUES.filter((v, i) => v.need > G.shownTotal && v.need <= G.total && !vowned.has(i));
   G.shownTotal = G.total;
@@ -1321,9 +1378,14 @@ function overUnlock() {
   // sıradaki hedef: bardak ya da mekân, hangisi daha yakınsa
   const next = SKINS.find((s, i) => s.need > G.total && !owned.has(i));
   const nextV = VENUES.find((v, i) => v.need > G.total && !vowned.has(i));
-  if (nextV && (!next || nextV.need < next.need)) { el.textContent = `${tr('Sıradaki mekân')}: ${tr(nextV.name)} · ${nextV.need - G.total} ${tr('bardak kaldı')}`; show('unlockNote', true); }
-  else if (next) { el.textContent = `${tr('Sıradaki bardak')}: ${tr(next.name)} · ${next.need - G.total} ${tr('bardak kaldı')}`; show('unlockNote', true); }
-  else show('unlockNote', false);
+  const isV = nextV && (!next || nextV.need < next.need), tgt = isV ? nextV : next;
+  if (!tgt) { show('unlockNote', false); return; }
+  const from = Math.max(0, ...(isV ? VENUES : SKINS).map((s) => s.need).filter((n) => n < tgt.need));
+  const pct = (t) => clamp((t - from) / (tgt.need - from), 0, 1) * 100;
+  el.innerHTML = '<span></span><div class="ubar"><i></i></div>';
+  el.firstChild.textContent = `${tr(isV ? 'Sıradaki mekân' : 'Sıradaki bardak')}: ${tr(tgt.name)} · ${tgt.need - G.total} ${tr('bardak kaldı')}`;
+  const bar = el.querySelector('i'); bar.style.width = pct(before) + '%';
+  show('unlockNote', true); void bar.offsetWidth; bar.style.width = pct(G.total) + '%';
 }
 function refreshTitle() {
   const d = dailyToday(), best = dailyBest(), streak = dailyStreak();
@@ -1335,8 +1397,9 @@ function refreshTitle() {
     || VENUES.some((v, i) => i > 0 && venueOpen(i) && store.get('ck_vseen' + i, '0') !== '1');
   $('cupsBtn').classList.toggle('dot', fresh);
   const ls = loginState(), sp = spinState();
-  $('giftBtn').classList.toggle('dot', !ls.claimed || sp.free);
-  $('giftSub').textContent = !ls.claimed ? tr('Hediyen hazır') : sp.free ? tr('Çark hazır') : `${tr('Seri')} ${ls.n}`;
+  const fixable = STREAKS.some((s) => rescuable(s.k) && !(s.k === 'ck_login' && ls.claimed));
+  $('giftBtn').classList.toggle('dot', !ls.claimed || sp.free || fixable);
+  $('giftSub').textContent = fixable ? tr('Seriyi kurtar') : !ls.claimed ? tr('Hediyen hazır') : sp.free ? tr('Çark hazır') : `${tr('Seri')} ${ls.n}`;
   const md = missions().list.filter((m) => m.done).length;
   $('achSub').textContent = `${tr('Bugün')} ${md}/3`;
   $('achBtn').classList.toggle('dot', md < 3 && store.get('ck_misSeen', '') !== dayKey());
@@ -1498,6 +1561,17 @@ function renderGift() {
     el.innerHTML = `<span>${i + 1}</span><svg><use href="#i-sugar"/></svg><b>${r}</b>`;
     box.append(el);
   });
+  const fx = $('fixBox'); fx.textContent = '';
+  for (const s of STREAKS) {
+    const n = rescuable(s.k); if (!n || (s.k === 'ck_login' && ls.claimed)) continue;
+    const b = document.createElement('button'); b.className = 'fix-btn';
+    b.innerHTML = `<span><b></b><small></small></span><i class="price"><svg><use href="#i-sugar"/></svg>${fixCost(n)}</i>`;
+    b.querySelector('b').textContent = `${tr(s.name)} · ${n} ${tr('gün')}`;
+    b.querySelector('small').textContent = tr('Dün kaçtı, şekerle kurtar');
+    b.addEventListener('click', (e) => { e.stopPropagation(); fixStreak(s.k, b); });
+    fx.append(b);
+  }
+  show('fixBox', fx.childElementCount > 0);
   const cb = $('claimBtn');
   cb.disabled = ls.claimed;
   cb.textContent = ls.claimed ? tr('Yarın yeni hediye') : `${tr('Hediyeyi al')} +${GIFT[ls.slot]}`;
@@ -1627,6 +1701,7 @@ function missions() {
 }
 function misText(m) { const d = MIS[m.i]; return tr(d.t).replace('{n}', d.n[m.l]); }
 function misEvent(k, v) {
+  weekEvent(k, v);
   const ms = missions(); let changed = false;
   for (const m of ms.list) {
     const d = MIS[m.i]; if (d.k !== k || m.done) continue;
@@ -1658,6 +1733,15 @@ function renderAch() {
     el.querySelector('b').textContent = misText(m);
     list.append(el);
   }
+  const ws = week(), left = 7 - (new Date().getDay() + 6) % 7;
+  head(`${tr('Bu haftanın hedefleri')} · ${left} ${tr('gün kaldı')}`);
+  WEEK.forEach((w, i) => {
+    const v = Math.min(ws.p[i], w.n), done = ws.done[i];
+    const el = document.createElement('div'); el.className = 'ach mis' + (done ? ' done' : '');
+    el.innerHTML = `<b></b><span class="rw">${done ? '✓' : `+${w.r}<svg><use href="#i-sugar"/></svg>`}</span><small>${v}/${w.n}</small>` + (done ? '' : `<div class="bar"><i style="width:${(v / w.n * 100).toFixed(1)}%"></i></div>`);
+    el.querySelector('b').textContent = weekText(i);
+    list.append(el);
+  });
   head(`${tr('Başarımlar')} · ${achDone.size}/${ACH.length}`);
   const sorted = ACH.slice().sort((a, b) => achDone.has(a.id) - achDone.has(b.id));
   for (const a of sorted) {
@@ -2033,6 +2117,22 @@ function drawTable() {
   ctx.fillStyle = gr; ctx.fillRect(-1400, 0, 2800, 60);
   ctx.restore();
 }
+function drawRecordLine() {
+  const c = G.cam, half = W / (2 * S * c.z), y = -G.bestH0 * PH;
+  const fade = G.recCrossed ? 1 - clamp((G.t - G.recT) / 1.4, 0, 1) : 1;
+  if (fade <= 0) return;
+  const glow = G.recCrossed ? 1 : .82 + .18 * Math.sin(G.t * 2.4);
+  ctx.globalAlpha = fade * glow;
+  ctx.beginPath(); ctx.moveTo(c.x - half, y); ctx.lineTo(c.x + half, y);
+  ctx.strokeStyle = 'rgba(60,24,20,0.35)'; ctx.lineWidth = 6; ctx.stroke();
+  ctx.strokeStyle = '#ffd77a'; ctx.lineWidth = 3; ctx.setLineDash([14, 9]); ctx.stroke(); ctx.setLineDash([]);
+  const txt = `${tr('Rekor')} · ${G.bestH0}`;
+  ctx.font = '800 15px Nunito, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const tw = ctx.measureText(txt).width, x = c.x + half - 14;
+  ctx.fillStyle = 'rgba(60,24,20,0.78)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - tw - 12, y - 14, tw + 24, 28, 14) : ctx.rect(x - tw - 12, y - 14, tw + 24, 28); ctx.fill();
+  ctx.fillStyle = '#ffe2a8'; ctx.fillText(txt, x, y + 1);
+  ctx.globalAlpha = 1;
+}
 function drawAski(h) {
   const p = hangPos(h);
   const rt = h.retract ? easeOutCubic(h.retract) : 0;
@@ -2069,6 +2169,7 @@ function render() {
   const bulbs = drawLights(P);
   drawTable();
   drawSprite(SPR.tray, 0, 0);
+  if (G.bestH0 >= 3 && G.state !== 'title') drawRecordLine();
   // kule
   const n = G.pieces.length;
   const trem = G.state === 'playing' && G.risk > .7 ? (G.risk - .7) / .3 : 0;
@@ -2296,7 +2397,7 @@ window.__game = {
   setTotal(n) { G.total = n; store.set('ck_total', n); }, selectSkin, revive: () => askRevive(), openCups, closeCups,
   get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
-  get offerRevive() { return G.offerRevive; },
+  get offerRevive() { return G.offerRevive; }, get week() { return week(); }, get bestH0() { return G.bestH0; },
   start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR,
   setTimeScale(s) { G.timeScale = s; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
