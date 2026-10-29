@@ -146,7 +146,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .modes .mode-btn{flex:1 1 calc(50% - 5px)}
 .earn{display:flex;align-items:center;justify-content:center;gap:5px;margin:-4px 0 10px;font-size:15px;font-weight:800;color:#7a3a28}
 .earn b{font-family:"Fraunces",serif;font-size:20px;color:#5a1c12}
-.share-btn{position:absolute;top:12px;right:12px;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:rgba(120,60,30,.08)}
+.share-btn{position:absolute;top:8px;right:8px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(120,60,30,.08)}
 .share-btn svg{width:20px;height:20px;fill:none;stroke:#7a3a28;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .share-btn:active{transform:scale(.9)}
 .btn.second{background:rgba(120,60,30,.1);color:#7a3a28;box-shadow:none;font-size:16px;padding:13px}
@@ -189,7 +189,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .ach.done .rw{color:#8a5a00}
 
 /* bildirim */
-#toast{position:fixed;left:50%;top:calc(var(--sat) + 124px);z-index:30;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
+#toast{position:fixed;left:50%;top:calc(var(--sat) + 66px);z-index:30;transform:translateX(-50%);display:flex;align-items:center;gap:8px;
   padding:10px 16px;border-radius:99px;background:rgba(255,246,232,.97);color:#5a1c12;font-weight:800;font-size:14px;white-space:nowrap;
   box-shadow:0 12px 30px rgba(30,10,20,.35);animation:toast 2.4s ease both;pointer-events:none}
 #toast svg{width:18px;height:18px}
@@ -221,7 +221,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .set-row[aria-checked="true"] .sw::after{transform:translateX(18px)}
 .set-gfx{padding:11px 14px 12px;border-radius:16px;background:rgba(120,60,30,.07)}
 .seg{display:flex;gap:4px;margin-top:9px;padding:3px;border-radius:12px;background:rgba(120,60,30,.1)}
-.seg button{flex:1;min-height:36px;padding:6px 4px;border-radius:9px;font-size:13px;font-weight:800;color:#7a3a28;transition:background .2s}
+.seg button{flex:1;min-height:44px;padding:6px 4px;border-radius:9px;font-size:13px;font-weight:800;color:#7a3a28;transition:background .2s}
 .seg button[aria-pressed="true"]{background:#fff6e8;color:#5a1c12;box-shadow:0 2px 8px rgba(90,30,10,.18)}
 .chev{width:18px;height:18px;flex:none;fill:none;stroke:#7a3a28;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 @media (max-height:640px){.set-panel{padding:18px 18px 16px}.set-panel h2{margin:4px 0 10px;font-size:26px}.set-row{min-height:48px;padding:7px 12px}.set-gfx{padding:8px 12px 9px}.set-list{gap:5px;margin-bottom:12px}}
@@ -245,3 +245,28 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .venue.locked b{opacity:.6}
 .venue.buy{background:linear-gradient(180deg,#6a4a3a,#4a2e24)}
 @media (max-height:760px){.mode-btn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}}
+
+/* oyun sonu iki blok: dikeyde tek sütun, yatayda yan yana */
+.ov-a,.ov-b{display:contents}
+/* yatay telefon: başlık ve oyun sonu kısa ekrana sığsın */
+@media (orientation:landscape) and (max-height:520px){
+  .screen{padding-top:calc(var(--sat) + 10px);padding-bottom:calc(var(--sab) + 12px)}
+  .logo{margin-top:-6px}
+  .logo h1{font-size:clamp(40px,13vh,64px)}
+  .logo h1 em{display:inline;margin-left:.2em}
+  #title .tag,#title .best-chip{display:none}
+  #title .bottom{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:10px}
+  .cta{padding:12px 22px;font-size:16px}
+  .modes{flex-wrap:nowrap;width:auto;gap:6px}
+  .modes .mode-btn{flex:0 0 auto;min-width:86px;padding:7px 10px;border-radius:14px}
+  .mode-btn b{font-size:13px}.mode-btn small{font-size:10px}
+  #over.sheet{justify-content:center}
+  #over .panel{width:min(620px,100%);display:flex;gap:18px;align-items:center;padding:14px 18px;max-height:100%;overflow:auto}
+  .ov-a,.ov-b{display:block;flex:1;min-width:0}
+  #over .final span{font-size:60px}
+  #over .stats{margin:8px 0 0;padding:10px 4px}
+  .panel{padding:18px 18px 14px}
+  .panel h2{margin:4px 0 12px;font-size:26px}
+  .cups-panel,.gift-panel,.set-panel,.ach-panel{width:min(520px,100%)}
+  #toast{top:calc(var(--sat) + 8px)}
+}
