@@ -2057,7 +2057,7 @@ function drawBackground(P) {
     const cxp = drift * W, cw = m.c.width / DPR, ch = m.c.height / DPR;
     ctx.globalAlpha = .8 - P.night * .25;
     ctx.drawImage(tinted(m, P.cloud), cxp - cw / 2, sy2 - ch / 2, cw, ch);
-    ctx.globalAlpha *= .6; ctx.drawImage(tinted(m.sh, mixc(P.cloud, P.skyTop, .5)), cxp - cw / 2, sy2 - ch / 2, cw, ch);
+    ctx.globalAlpha *= .6; ctx.drawImage(tinted(m.sh, mixc(PT.cloud, PT.skyTop, .5)), cxp - cw / 2, sy2 - ch / 2, cw, ch);
   }
   ctx.globalAlpha = 1;
   // ufuk: önceden birleştirilmiş tek tuval (kara katmanları + su/vadi)
@@ -2154,7 +2154,8 @@ function worldTransform(shx, shy) {
   ctx.setTransform(DPR * k, 0, 0, DPR * k, DPR * (W / 2 + shx - c.x * k), DPR * (H / 2 + shy + c.y * k));
 }
 function drawSprite(sp, x, y) { ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); }
-let REFL = null;
+// yansıma yalnız tepedeki bardaklarda (kamera oraya bakar)
+let REFL = null, PT = PHASES[0], reflOn = true;
 const SUN = { x: 0, y: 0 };
 function drawPiece(p, x, y, sq) {
   // x,y: tabak altı (ekran-aşağı koordinat)
@@ -2162,7 +2163,7 @@ function drawPiece(p, x, y, sq) {
   drawSprite(SPR.contact, x, y - 1);
   drawSprite(p.golden ? SPR.saucerGold : SPR.saucer, x, y);
   drawSprite(p.golden ? SPR.glassGold : SPR.glass[p.tea], x, y - LIFT);
-  if (REFL) { const a = ctx.globalAlpha, r = SPR.reflM; ctx.globalAlpha = a * .3; ctx.drawImage(REFL, x - r.ox, y - LIFT - r.oy, r.w, r.h); ctx.globalAlpha = a; }
+  if (REFL && reflOn) { const a = ctx.globalAlpha, r = SPR.reflM; ctx.globalAlpha = a * .3; ctx.drawImage(REFL, x - r.ox, y - LIFT - r.oy, r.w, r.h); ctx.globalAlpha = a; }
   if (sq) ctx.restore();
 }
 function drawLights(P) {
@@ -2267,7 +2268,7 @@ function drawDust(P, k) {
   // güneşten terasa inen iki huzme ve içinde yavaşça süzülen tozlar
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   const dx = W * .5 - SUN.x, dy = H * 1.05 - SUN.y, len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) - Math.PI / 2;
-  const col = tinted(SPR.beam, mixc(P.glow, [255, 230, 200], .3));
+  const col = tinted(SPR.beam, mixc(PT.glow, [255, 230, 200], .3));
   ctx.save(); ctx.translate(SUN.x, SUN.y); ctx.rotate(ang);
   ctx.globalAlpha = .13 * k * (.85 + .15 * Math.sin(G.t * .5));
   ctx.drawImage(col, -len * .38, 0, len * .76, len * .85); ctx.restore();
@@ -2285,7 +2286,9 @@ function drawDust(P, k) {
 function render() {
   const P = blendedPhase();
   drawBackground(P);
-  REFL = tinted(SPR.reflM, mixc(mixc(P.skyMid, P.skyBot, .5), P.glow, .25));
+  // ince katmanlar varılan vaktin rengini alır: geçiş boyunca her kare yeniden boyanmasın
+  PT = PHASES[G.phase];
+  REFL = tinted(SPR.reflM, mixc(mixc(PT.skyMid, PT.skyBot, .5), PT.glow, .25));
   const shx = (Math.random() - .5) * G.shake * S, shy = (Math.random() - .5) * G.shake * S;
   worldTransform(shx, shy);
   const bulbs = drawLights(P);
@@ -2301,8 +2304,10 @@ function render() {
     const age = G.t - p.born;
     const sq = age < .5 ? Math.sin(age * 20) * Math.exp(-age * 9) * .12 : 0;
     const tr = trem && i > n - 4 ? Math.sin(G.t * 42 + i) * trem * .9 : 0;
+    reflOn = i >= n - 6;
     drawPiece(p, p.x + tr, -i * PH, sq);
   }
+  reflOn = true;
   // devrilen grup
   if (G.topple) {
     const T = G.topple;
