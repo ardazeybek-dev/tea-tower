@@ -685,6 +685,7 @@ function freeScene(sc) {
   for (const L of sc.layers) freeMask(L.m);
   for (const k of ['kk', 'fe', 'comp', 'T', 'E']) freeMask(sc[k]);
   if (sc.balloons) sc.balloons.forEach(freeMask);
+  if (sc.comps) sc.comps.forEach(freeMask);
 }
 let CLOUDS = null;
 function buildBackground() {
@@ -713,11 +714,11 @@ function buildBackground() {
   }
   // ufuk tek tuvalde birleşir: kara katmanları + deniz/kara zemini (ekranın alt %42'si)
   BG = { bw, bh, ...sc, clouds: CLOUDS.list, stars: CLOUDS.stars, ov: mk(Math.ceil(W / 3), Math.ceil(H / 3)), ovKey: '',
-    comp: maskCanvas(bw, bh + Math.ceil(H * .42 * DPR)), T: maskCanvas(bw, bh), E: maskCanvas(bw, bh), compKey: '' };
+    comps: [0, 1].map(() => maskCanvas(bw, bh + Math.ceil(H * .42 * DPR))), T: maskCanvas(bw, bh), E: maskCanvas(bw, bh) };
 }
 // ------------------------------------------------------------------ ufuk birleştirme
-// Vaktin renkleriyle: katman rengi × gölge, güneşe bakan kenar aydınlık, karşı yan gölgede, uzak katman pusa gömülür.
-// Sonra ufuk pusu, güneş saçılması, su (yansıma + dalga bantları) ya da vadi tabanı. Yalnızca renkler değişince çizilir.
+// Bir vaktin renkleriyle: katman rengi × gölge, güneşe bakan kenar aydınlık, karşı yan gölgede, uzak katman pusa gömülür.
+// Sonra ufuk pusu, güneş saçılması, su (yansıma + dalga bantları) ya da vadi tabanı. Vakit başına bir kez çizilir (horizonFor).
 const hazeOf = (P) => mixc(P.skyBot, P.glow, .3);
 function layerColor(L, P, V, nt) {
   const far = vtint(mixc(P.far, P.skyBot, .25), V.far, nt), city = vtint(P.city, V.city, nt);
@@ -819,12 +820,14 @@ function composeHorizon(o, layers, bh, P, V, u, T, E, vw, lite) {
   }
   o.low = low;
 }
-// geçişte anahtar 12 adıma yuvarlanır: 2,2 sn'lik geçişte en fazla 12 kez birleştirilir
-function horizon(P, V) {
-  const q = G.phaseT >= 1 ? 1 : Math.round(easeInOut(G.phaseT) * 12) / 12;
-  const key = G.phaseFrom + '|' + G.phase + '|' + q + '|' + eco();
-  if (BG.compKey !== key) { BG.compKey = key; composeHorizon(BG.comp, BG.layers, BG.bh, P, V, S * DPR, BG.T, BG.E, W * DPR, eco()); }
-  return BG.comp;
+// her vaktin ufku bir kez birleştirilir; iki tuval son iki vakti tutar, geçişte ikisi çapraz karışır
+// (geçiş başına en fazla bir birleştirme). keep: geçişte öbür ucu tutan tuval, üstüne yazılmaz
+function horizonFor(i, keep) {
+  const key = i + '|' + eco();
+  for (const o of BG.comps) if (o.key === key) return o;
+  const o = BG.comps[0] === keep ? BG.comps[1] : BG.comps[0];
+  o.key = key; composeHorizon(o, BG.layers, BG.bh, PHASES[i], VENUES[G.venue], S * DPR, BG.T, BG.E, W * DPR, eco());
+  return o;
 }
 // renk grade + vinyet tek bir multiply katmanında (düşük çözünürlük, yumuşak)
 function gradeOverlay(gc) {
@@ -1891,9 +1894,10 @@ function drawBackground(P) {
   const hy = H * .6 + rise * .3;
   if (hy < H + 40) {
     const bw = BG.bw / DPR, bh = BG.bh / DPR, ox = (W - bw) / 2 + hx, ty = hy - bh + 2;
-    const comp = horizon(P, V), ch = comp.c.height / DPR;
-    ctx.drawImage(comp.c, ox, ty, bw, ch);
-    if (ty + ch < H) { ctx.fillStyle = rgb(comp.low); ctx.fillRect(0, ty + ch - 1, W, H - ty - ch + 1); }
+    const ta = G.phaseT >= 1 ? 1 : easeInOut(G.phaseT), ca = ta < 1 ? horizonFor(G.phaseFrom) : null, cb = horizonFor(G.phase, ca), ch = cb.c.height / DPR;
+    if (ca) { ctx.drawImage(ca.c, ox, ty, bw, ch); ctx.globalAlpha = ta; }
+    ctx.drawImage(cb.c, ox, ty, bw, ch); ctx.globalAlpha = 1;
+    if (ty + ch < H) { ctx.fillStyle = rgb(ca ? mixc(ca.low, cb.low, ta) : cb.low); ctx.fillRect(0, ty + ch - 1, W, H - ty - ch + 1); }
     if (nt > .05) {
       for (const w of BG.wins) {
         const f = .6 + .4 * Math.sin(G.t * .7 + w[2] * 30);
