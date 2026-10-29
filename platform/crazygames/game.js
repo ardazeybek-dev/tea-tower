@@ -861,7 +861,7 @@ function endGame() {
   setOffer(canRevive);
   if (canRevive && window.PF && window.PF.offerReward) window.PF.offerReward();
   $('earnN').textContent = '+' + G.runSugar;
-  checkAch();
+  checkAch(); flushToasts();
   $('titleBest').querySelector('b').textContent = G.best;
   refreshTitle();
   show('hud', false); show('tutorial', false); show('over', true);
@@ -1039,6 +1039,9 @@ function spin() {
   // ağırlıklı seçim
   let r = Math.random() * WHEEL.reduce((a, s) => a + s.w, 0), k = 0;
   while (r >= WHEEL[k].w) { r -= WHEEL[k].w; k++; }
+  // ödül dönüş başlarken kaydedilir: sekme kapanırsa hak da ödül de kaybolmasın (sayaç dönüş bitince güncellenir)
+  const v = WHEEL[k].v;
+  Wallet.n += v; store.set('ck_sugar', Wallet.n);
   const n = WHEEL.length, seg = TAU / n;
   const from = wheelRot % TAU;
   const to = TAU * 5 + (TAU - (k + .5) * seg) + rand(-.36, .36) * seg;
@@ -1054,8 +1057,7 @@ function spin() {
     drawWheel();
     if (t < 1) { wheelAnim = requestAnimationFrame(stepFn); return; }
     wheelAnim = 0;
-    const v = WHEEL[k].v;
-    Wallet.add(v);
+    ui.wallet(true);
     if (v >= 100) { Snd.record(); vibrate([30, 40, 30]); } else { Snd.chime(); vibrate([20, 30, 20]); }
     $('wheelWin').innerHTML = `<span>+${v} <svg style="width:22px;height:22px;vertical-align:-3px"><use href="#i-sugar"/></svg></span>`;
     show('wheelWin', true);
@@ -1157,9 +1159,12 @@ function renderAch() {
 // üstte kısa bildirim (sıralı)
 const toastQ = [];
 let toastBusy = false;
-function toast(html) { toastQ.push(html); if (!toastBusy) nextToast(); }
+// oyun sırasında ekran sakin kalsın: bildirimler el bitince gösterilir
+const quiet = () => G.state === 'playing' || G.state === 'toppling' || G.state === 'paused';
+function toast(html) { toastQ.push(html); if (!toastBusy && !quiet()) nextToast(); }
+function flushToasts() { if (!toastBusy && toastQ.length) nextToast(); }
 function nextToast() {
-  const el = $('toast'), h = toastQ.shift();
+  const el = $('toast'), h = quiet() ? null : toastQ.shift();
   if (!h) { toastBusy = false; show('toast', false); return; }
   toastBusy = true;
   el.innerHTML = `<svg><use href="#i-sugar"/></svg><span>${h}</span>`;
@@ -1632,7 +1637,7 @@ function goHome() {
   show('pause', false); show('over', false); show('hud', false); show('tutorial', false);
   G.state = 'title'; G.phaseFrom = G.phase; demoTower(); G.phaseFrom = 0; G.phaseT = 1;
   $('titleBest').querySelector('b').textContent = G.best;
-  refreshTitle();
+  refreshTitle(); flushToasts();
   show('title', true);
 }
 PF.bind({ mute(on) { Snd.setForced(on); }, pauseInput(on) { adLock = !!on; } });
@@ -1733,6 +1738,9 @@ window.__game = {
 resize();
 syncMute();
 $('titleBest').querySelector('b').textContent = G.best;
+// eski kayıtlı oyuncular: bu sürümden önceki rekorlar başarımlara sayılsın
+ST.bestScore = Math.max(ST.bestScore, G.best); ST.dailyBest = Math.max(ST.dailyBest, dailyStreak());
+saveStats(); checkAch();
 refreshTitle();
 demoTower();
 // günün ilk açılışında hediye paneli kendiliğinden gelsin
