@@ -75,7 +75,7 @@ platform/
 
 ## Gotchas
 
-- Changes not showing after deploy → the service worker serves cached assets → bump `CACHE` in `docs/sw.js`.
+- Changes not showing after deploy → the service worker serves cached assets → bump `CACHE` in `docs/sw.js` (install fetches with `cache: 'reload'` so the new cache never stores HTTP-cached old files).
 - Headless browser FPS looks very low → software rasterization at DPR 3 → measure with a GPU-backed browser. `window.__game.perf()` reports FPS and per-frame JS time.
 - `build.py` stops with "expected 1 match" → a line it patches in `docs/game.js` changed → update the matching `sub1` call in `build.py`.
 - Portal SDK logs "gameplayStart() call throttled" in tests → start/stop closer than 1 s → leave real time between rounds.
