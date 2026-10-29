@@ -17,16 +17,20 @@ A one-thumb stacking game set on a tea terrace facing the Bosphorus. A brass tea
 
 ## Modes and progression
 
-- **Second chance:** after a good run (score at least 10 and at least half of your best) the game-over sheet offers one revive per run. The fallen glasses are cleared, the rest of the tower is straightened a little and the score is kept. On the portal builds this is a rewarded ad. On GitHub Pages it is free.
+- **Second chance:** after a good run (score at least 10 and at least half of your best) the game-over sheet offers one revive per run. The fallen glasses are cleared, the rest of the tower is straightened a little and the score is kept. On the portal builds this is a rewarded ad. On GitHub Pages it is free. While it is offered, tapping the screen does nothing, so a stray tap never throws it away.
 - **Daily tea:** one run type per calendar day (local time), the same for everyone. It has a daily rule (windy hanger, hasty swing, golden hour, wide swing or southwester), a seeded glass sequence and a starting time of day. It keeps its own best score for the day and a streak of consecutive days. Second chance is off in this mode.
-- **Glass collection:** every glass you stack counts toward a lifetime total that unlocks new designs at 30, 80, 160, 300 and 500: fluted, tulip, evil eye, silver and cobalt. Pick one under *Glasses* on the title screen. Gilded bonus glasses always keep their gold look.
+- **Glass collection:** every glass you stack counts toward a lifetime total that unlocks new designs at 30, 80, 160, 300 and 500: fluted, tulip, evil eye, silver and cobalt. Pick one under *Glasses* on the title screen. Gilded bonus glasses always keep their gold look. Any of them can also be bought early with sugar, and three more (emerald, ruby, pearl) are sugar only.
+- **Sugar:** the in-game currency. Every glass stacked gives 1, a perfect drop +1 and a gilded glass +2, credited as you play. Gifts, the wheel, missions and achievements pay sugar too.
+- **Gifts:** a 7-day login streak (20, 30, 40, 60, 80, 100, 150 sugar; a missed day starts over) and a daily wheel with one free spin. On the portal builds a rewarded ad gives one extra spin. The panel opens by itself on the first visit of the day.
+- **Missions:** three daily missions picked from the date (stack, perfects, height, combo, gilded, runs, Daily tea), plus 19 permanent achievements. Both pay sugar the moment they are done.
+- **Share:** the game-over sheet shares the score with the Web Share API, or copies it to the clipboard. It is hidden on the portal builds.
 
 ## Features
 
 - Canvas2D renderer with no build step and no dependencies. Every sprite (glasses, saucers, brass tray, kilim tablecloth, Istanbul skyline) is drawn in code and cached once per resolution.
 - All audio is synthesized with WebAudio: glass clinks, perfect-drop notes that rise along the Hicaz scale, a sea ambience and seagulls.
 - Installable PWA that works offline (manifest + service worker), with high-DPI rendering, safe-area insets and adaptive resolution.
-- Best score, daily best and streak, lifetime glass count and the chosen design are saved in `localStorage` (`ck_*` keys).
+- Best score, daily best and streak, lifetime glass count, chosen design, sugar, owned designs, gift streak, wheel spins, missions, achievements and stats are saved in `localStorage` (`ck_*` keys).
 
 ## Run locally
 

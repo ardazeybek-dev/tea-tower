@@ -47,15 +47,21 @@ const PHASES = [
 });
 const PHASE_LEN = 7;
 
-// bardak koleksiyonu: toplam dizilen bardakla açılır
+// bardak koleksiyonu: toplam dizilen bardakla açılır ya da şekerle erken alınır; need'i olmayanlar yalnızca şekerle
 const SKINS = [
   { name: 'Klasik', need: 0 },
-  { name: 'Çizgili', need: 30 },
-  { name: 'Lale', need: 80 },
-  { name: 'Nazar', need: 160 },
-  { name: 'Gümüş', need: 300 },
-  { name: 'Kobalt', need: 500 },
+  { name: 'Çizgili', need: 30, price: 80 },
+  { name: 'Lale', need: 80, price: 160 },
+  { name: 'Nazar', need: 160, price: 300 },
+  { name: 'Gümüş', need: 300, price: 500 },
+  { name: 'Kobalt', need: 500, price: 800 },
+  { name: 'Zümrüt', price: 600 },
+  { name: 'Yakut', price: 1000 },
+  { name: 'Sedef', price: 1500 },
 ];
+// günlük çark dilimleri (v: şeker, w: ağırlık) ve 7 günlük giriş serisi
+const WHEEL = [{ v: 10, w: 20 }, { v: 25, w: 13 }, { v: 15, w: 18 }, { v: 50, w: 7 }, { v: 20, w: 16 }, { v: 35, w: 10 }, { v: 12, w: 14 }, { v: 150, w: 2 }];
+const GIFT = [20, 30, 40, 60, 80, 100, 150];
 // günlük çay: her gün herkes için aynı kural + aynı bardak dizisi
 const DAILY = [
   { name: 'Rüzgârlı Boğaz', drift: 1 },
@@ -164,6 +170,23 @@ function decorate(g, skin) {
     g.fillStyle = 'rgba(40,86,210,0.34)'; g.fillRect(-30, -93, 60, 95);
     g.fillStyle = 'rgba(255,255,255,0.85)';
     for (let i = -3; i <= 3; i++) { g.beginPath(); g.arc(i * 6.4, -86, 1.3, 0, TAU); g.fill(); g.beginPath(); g.arc(i * 6.4 + 3.2, -82, 1, 0, TAU); g.fill(); }
+  } else if (skin === 6) {
+    // zümrüt: yeşil cam + altın ağız ve bel noktaları
+    g.fillStyle = 'rgba(24,150,96,0.36)'; g.fillRect(-30, -93, 60, 95);
+    g.fillStyle = '#e8c062'; g.fillRect(-30, -93, 60, 4);
+    for (let i = -2; i <= 2; i++) { g.beginPath(); g.arc(i * 7, -39, 1.5, 0, TAU); g.fill(); }
+  } else if (skin === 7) {
+    // yakut: kırmızı cam + çapraz kesim parıltıları
+    g.fillStyle = 'rgba(200,16,56,0.34)'; g.fillRect(-30, -93, 60, 95);
+    g.strokeStyle = 'rgba(255,220,230,0.4)'; g.lineWidth = 1;
+    for (let i = -4; i <= 4; i++) { g.beginPath(); g.moveTo(i * 9 - 10, -4); g.lineTo(i * 9 + 10, -90); g.stroke(); g.beginPath(); g.moveTo(i * 9 + 10, -4); g.lineTo(i * 9 - 10, -90); g.stroke(); }
+  } else if (skin === 8) {
+    // sedef: gökkuşağı yanardöner + parıltı noktaları
+    const ir = g.createLinearGradient(-28, -90, 28, 0);
+    ir.addColorStop(0, 'rgba(255,170,220,0.34)'); ir.addColorStop(.35, 'rgba(170,220,255,0.3)'); ir.addColorStop(.65, 'rgba(190,255,210,0.3)'); ir.addColorStop(1, 'rgba(255,230,170,0.34)');
+    g.fillStyle = ir; g.fillRect(-30, -93, 60, 95);
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    for (const [x, y, r] of [[-12, -70, 1.6], [9, -56, 1.2], [-6, -22, 1.3], [13, -80, 1], [2, -40, .9]]) { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); }
   }
 }
 function makeGlass(tea, golden, skin) {
@@ -542,6 +565,7 @@ const Snd = (() => {
     chime() { if (!ac) return; const t = now(); [0, 4, 7, 12].forEach((s, i) => glass(392 * Math.pow(2, s / 12), .07, 1.2, t + i * .09)); },
     record() { if (!ac) return; const t = now(); [0, 4, 5, 7, 12, 16].forEach((s, i) => glass(587.33 * Math.pow(2, (HICAZ[i * 2] || s) / 12), .16, 1.1, t + i * .085)); },
     click() { if (!ac) return; glass(1800, .06, .15); },
+    tick() { if (!ac) return; const t = now(); noise(.018, .08, 'bandpass', 3200, 2, t); tone(1400, .025, .04, 'sine', t, false); },
     start() { if (!ac) return; const t = now(); glass(880, .1, .7, t); glass(1318, .07, .7, t + .07); },
     gull,
   };
@@ -556,11 +580,22 @@ const G = {
   cam: { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 }, shake: 0, flash: 0,
   phase: 0, phaseFrom: 0, phaseT: 1, overAt: 0, spawnIn: 0, lastGolden: false,
   tutorial: store.get('ck_tut', '0') !== '1', tutDone: 0,
-  mode: 'classic', mod: null, ph0: 0, revived: false, cupsOpen: false,
+  mode: 'classic', mod: null, ph0: 0, revived: false, panel: null, offerRevive: false, runSugar: 0,
   total: parseInt(store.get('ck_total', '0'), 10) || 0, skin: parseInt(store.get('ck_skin', '0'), 10) || 0,
 };
 G.shownTotal = G.total;
-if (!(G.skin > 0 && G.skin < SKINS.length && G.total >= SKINS[G.skin].need)) G.skin = 0;
+const owned = new Set(store.get('ck_owned', '').split(',').filter(Boolean).map(Number));
+function skinOpen(i) { const s = SKINS[i]; return !!s && (i === 0 || owned.has(i) || (s.need > 0 && G.total >= s.need)); }
+if (!(G.skin > 0 && skinOpen(G.skin))) G.skin = 0;
+// şeker cüzdanı + kalıcı sayaçlar (başarımlar bunlardan okunur)
+const jget = (k, d) => { try { return Object.assign(d, JSON.parse(store.get(k, '{}'))); } catch (e) { return d; } };
+const ST = jget('ck_stats', { gold: 0, bestH: 0, bestCombo: 0, bestScore: 0, dailyBest: 0, loginBest: 0, spins: 0 });
+function saveStats() { store.set('ck_stats', JSON.stringify(ST)); }
+const Wallet = {
+  n: parseInt(store.get('ck_sugar', '0'), 10) || 0,
+  add(k) { this.n += k; store.set('ck_sugar', this.n); ui.wallet(true); },
+  spend(k) { if (this.n < k) return false; this.n -= k; store.set('ck_sugar', this.n); ui.wallet(false); return true; },
+};
 let rng = Math.random;   // oyun akışı rastgeleliği (günlük modda tohumlu)
 
 // ------------------------------------------------------------------ günlük çay
@@ -581,8 +616,28 @@ function markDailyPlayed() {
   const p = readPair('ck_streak'), today = dayKey();
   if (p.key === today) return;
   const y = new Date(); y.setDate(y.getDate() - 1);
-  store.set('ck_streak', today + '|' + (p.key === dayKey(y) ? p.n + 1 : 1));
+  const n = p.key === dayKey(y) ? p.n + 1 : 1;
+  store.set('ck_streak', today + '|' + n);
+  ST.dailyBest = Math.max(ST.dailyBest, n); saveStats();
 }
+// giriş serisi: art arda gelinen her gün bir hediye, 7 günde bir döngü
+function loginState() {
+  const p = readPair('ck_login'), y = new Date(); y.setDate(y.getDate() - 1);
+  const claimed = p.key === dayKey(), n = claimed || p.key === dayKey(y) ? p.n : 0;
+  return { claimed, n, slot: (claimed ? n - 1 : n) % GIFT.length };
+}
+function claimGift() {
+  const s = loginState(); if (s.claimed) return;
+  const n = s.n + 1, r = GIFT[s.slot];
+  store.set('ck_login', dayKey() + '|' + n);
+  ST.loginBest = Math.max(ST.loginBest, n); saveStats();
+  Wallet.add(r); Snd.chime(); vibrate([20, 30, 20]);
+  toast(`${tr('Günlük hediye')} <em>+${r}</em>`);
+  checkAch(); renderGift(); refreshTitle();
+}
+// çark: günde bir bedava, portallarda reklamla bir tane daha
+function spinsUsed() { const p = readPair('ck_spin'); return p.key === dayKey() ? p.n : 0; }
+function spinState() { const u = spinsUsed(); return { free: u < 1, extra: u === 1 && !!window.PF && rewardReady() }; }
 function setupMode() {
   if (G.mode === 'daily') { const d = dailyToday(); G.mod = d.mod; G.ph0 = d.ph0; rng = seeded(d.num * 7 + 1); }
   else { G.mod = null; G.ph0 = 0; rng = Math.random; }
@@ -622,7 +677,7 @@ function hangPos(h) {
 function resetWorld() {
   G.pieces.length = 0; G.bodies.length = 0; parts.length = 0; rings.length = 0; floaters.length = 0;
   G.drop = null; G.topple = null; G.score = 0; G.combo = 0; G.maxCombo = 0; G.perfects = 0; G.risk = 0; G.warned = false; G.recordShown = false;
-  G.lastGolden = false; G.revived = false;
+  G.lastGolden = false; G.revived = false; G.offerRevive = false; G.runSugar = 0;
 }
 function demoTower() {
   resetWorld();
@@ -643,12 +698,15 @@ function startGame(mode) {
   spawnHang();
   ui.score(0, false); ui.combo('');
   if (G.mod) floater(0, 230, `${tr('Günlük çay')} · ${tr(G.mod.name)}`, '#ffe2a8', 22, true);
+  misEvent('runs', 1); if (G.mode === 'daily') misEvent('daily', 1);
   show('title', false); show('over', false); show('pause', false); show('hud', true);
   show('tutorial', G.tutorial);
 }
 function tap() {
-  if (G.cupsOpen) return;
+  if (G.panel) return;
   if (G.state === 'title') { startGame('classic'); return; }
+  // ikinci şans açıkken boş yere dokunmak hakkı yakmasın: seçim butonlarla
+  if (G.state === 'over' && G.offerRevive) return;
   if (G.state === 'over') { if (performance.now() - G.overAt > 450) startGame(); return; }
   if (G.state !== 'playing') return;
   const h = G.hang;
@@ -693,6 +751,14 @@ function land() {
   }
   G.score += gain;
   if (gain > 1) floater(piece.tx + 74, ty + PH - 10, `+${gain}`, '#ffffff', 20, true);
+  // şeker: her bardak 1, mükemmel +1, yaldızlı +2; anında cüzdana (sekme kapansa da kaybolmaz)
+  const sg = 1 + (perfect ? 1 : 0) + (d.spec.golden ? 2 : 0);
+  G.runSugar += sg; Wallet.add(sg);
+  if (d.spec.golden) { ST.gold++; misEvent('gold', 1); }
+  misEvent('glass', 1); if (perfect) misEvent('perfect', 1);
+  misEvent('height', G.pieces.length); misEvent('combo', G.combo);
+  ST.bestH = Math.max(ST.bestH, G.pieces.length); ST.bestCombo = Math.max(ST.bestCombo, G.combo); ST.bestScore = Math.max(ST.bestScore, G.score);
+  saveStats(); checkAch();
   ui.score(G.score, true); ui.combo(G.combo >= 2 ? `Kombo ×${G.combo}` : '');
   // risk uyarısı
   const st2 = stability();
@@ -787,16 +853,25 @@ function endGame() {
   $('reviveLbl').textContent = tr(window.PF ? 'Reklam izle, devam et' : 'İkinci şans');
   $('reviveBtn').disabled = false;
   show('reviveBtn', canRevive); show('reviveNote', false);
+  setOffer(canRevive);
   if (canRevive && window.PF && window.PF.offerReward) window.PF.offerReward();
+  $('earnN').textContent = '+' + G.runSugar;
+  checkAch();
   $('titleBest').querySelector('b').textContent = G.best;
   refreshTitle();
   show('hud', false); show('tutorial', false); show('over', true);
   if (rec && G.score > 0) { setTimeout(() => { Snd.record(); confetti(60); }, 280); }
 }
+// ikinci şans sunulurken "Bir el daha" ikincil, ekrana dokunma kapalı
+function setOffer(on) {
+  G.offerRevive = on;
+  $('againBtn').className = 'btn ' + (on ? 'second' : 'primary');
+  show('overHint', !on);
+}
 function rewardReady() { return !window.PF || !window.PF.canReward || window.PF.canReward(); }
 function revive() {
   if (G.state !== 'over' || G.revived) return;
-  G.revived = true; G.bodies.length = 0; G.topple = null; G.toOverIn = 0; G.slow = 1;
+  G.revived = true; G.offerRevive = false; G.bodies.length = 0; G.topple = null; G.toOverIn = 0; G.slow = 1;
   straighten(.35); G.risk = stability().risk; G.warned = false; G.combo = 0;
   G.state = 'playing';
   show('over', false); show('hud', true);
@@ -812,18 +887,18 @@ function askRevive() {
   const done = (ok) => {
     btn.disabled = false;
     if (ok) { revive(); return; }
-    show('reviveBtn', false); $('reviveNote').textContent = tr('Reklam şu an yok, sonra tekrar dene'); show('reviveNote', true);
+    setOffer(false); show('reviveBtn', false); $('reviveNote').textContent = tr('Reklam şu an yok, sonra tekrar dene'); show('reviveNote', true);
   };
   if (window.PF && window.PF.rewarded) window.PF.rewarded(done); else done(true);
 }
 // oyun sonu: yeni açılan bardak ya da sıradakine kalan
 function overUnlock() {
-  const fresh = SKINS.filter((s) => s.need > G.shownTotal && s.need <= G.total);
+  const fresh = SKINS.filter((s, i) => s.need > G.shownTotal && s.need <= G.total && !owned.has(i));
   G.shownTotal = G.total;
   const el = $('unlockNote');
   el.classList.toggle('new', fresh.length > 0);
   if (fresh.length) { el.textContent = `${tr('Yeni bardak açıldı')}: ${fresh.map((s) => tr(s.name)).join(', ')}`; show('unlockNote', true); return; }
-  const next = SKINS.find((s) => s.need > G.total);
+  const next = SKINS.find((s, i) => s.need > G.total && !owned.has(i));
   if (next) { el.textContent = `${tr('Sıradaki bardak')}: ${tr(next.name)} · ${next.need - G.total} ${tr('bardak kaldı')}`; show('unlockNote', true); }
   else show('unlockNote', false);
 }
@@ -833,38 +908,266 @@ function refreshTitle() {
   if (best) sub += ` · ${tr('Bugün')} ${best}`;
   if (streak) sub += ` · ${tr('Seri')} ${streak}`;
   $('dailySub').textContent = sub;
-  const fresh = SKINS.some((s, i) => i > 0 && s.need <= G.total && store.get('ck_seen' + i, '0') !== '1');
+  const fresh = SKINS.some((s, i) => i > 0 && skinOpen(i) && store.get('ck_seen' + i, '0') !== '1');
   $('cupsBtn').classList.toggle('dot', fresh);
+  const ls = loginState(), sp = spinState();
+  $('giftBtn').classList.toggle('dot', !ls.claimed || sp.free);
+  $('giftSub').textContent = !ls.claimed ? tr('Hediyen hazır') : sp.free ? tr('Çark hazır') : `${tr('Seri')} ${ls.n}`;
+  const md = missions().list.filter((m) => m.done).length;
+  $('achSub').textContent = `${tr('Bugün')} ${md}/3`;
+  $('achBtn').classList.toggle('dot', md < 3 && store.get('ck_misSeen', '') !== dayKey());
+  ui.wallet(false);
 }
-// koleksiyon paneli
-function openCups() {
-  if (G.state !== 'title') return;
-  G.cupsOpen = true; renderCups(); show('cups', true);
+// paneller (koleksiyon, hediye, başarımlar): açıkken oyun dokunuşu kapalı
+function openPanel(id) {
+  if (G.state !== 'title' || G.panel) return;
+  G.panel = id;
+  if (id === 'cups') renderCups(); else if (id === 'gift') renderGift(); else { renderAch(); store.set('ck_misSeen', dayKey()); }
+  show(id, true);
 }
-function closeCups() { G.cupsOpen = false; show('cups', false); refreshTitle(); }
-function renderCups() {
+function closePanel() {
+  if (!G.panel || wheelAnim) return;
+  show(G.panel, false); G.panel = null; refreshTitle();
+}
+function openCups() { openPanel('cups'); }
+function closeCups() { if (G.panel === 'cups') closePanel(); }
+function renderCups(note) {
   const grid = $('cupGrid'); grid.textContent = '';
-  $('cupTotal').textContent = `${tr('Toplam')} ${G.total} ${tr('bardak')}`;
+  $('cupTotal').textContent = note || `${tr('Toplam')} ${G.total} ${tr('bardak')}`;
   SKINS.forEach((s, i) => {
-    const open = G.total >= s.need;
+    const open = skinOpen(i);
     if (open) store.set('ck_seen' + i, '1');
     const b = document.createElement('button');
-    b.className = 'cup' + (open ? '' : ' locked') + (G.skin === i ? ' on' : '');
+    b.className = 'cup' + (open ? '' : ' locked') + (!open && Wallet.n >= s.price ? ' buy' : '') + (G.skin === i ? ' on' : '');
     b.setAttribute('aria-pressed', G.skin === i ? 'true' : 'false');
     const sp = makeGlass(TEA[1], false, i), c = document.createElement('canvas');
     c.width = sp.c.width; c.height = sp.c.height; c.getContext('2d').drawImage(sp.c, 0, 0);
     const name = document.createElement('b'); name.textContent = tr(s.name);
-    const sub = document.createElement('span'); sub.textContent = open ? (G.skin === i ? tr('Seçili') : '') : `${s.need} ${tr('bardak')}`;
+    const sub = document.createElement('span');
+    if (open) sub.textContent = G.skin === i ? tr('Seçili') : '';
+    else { sub.className = 'price'; sub.innerHTML = `<svg><use href="#i-sugar"/></svg>${s.price}`; }
     b.append(c, name, sub);
-    if (open) b.addEventListener('click', (e) => { e.stopPropagation(); selectSkin(i); Snd.init(); Snd.click(); });
+    b.addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); if (open) { selectSkin(i); Snd.click(); } else buySkin(i, b); });
     grid.append(b);
   });
 }
+function buySkin(i, el) {
+  const s = SKINS[i];
+  if (!Wallet.spend(s.price)) {
+    el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); Snd.click(); vibrate(30);
+    $('cupTotal').textContent = `${s.price - Wallet.n} ${tr('şeker daha lazım')}` + (s.need ? ` · ${tr('ya da')} ${s.need - G.total} ${tr('bardak')}` : '');
+    return;
+  }
+  owned.add(i); store.set('ck_owned', [...owned].join(','));
+  Snd.record(); vibrate([20, 30, 20]);
+  selectSkin(i); checkAch();
+}
 function selectSkin(i) {
-  if (G.total < SKINS[i].need) return;
+  if (!skinOpen(i)) return;
   G.skin = i; store.set('ck_skin', i);
   SPR.glass = TEA.map((t) => makeGlass(t, false, G.skin));
-  if (G.cupsOpen) renderCups();
+  if (G.panel === 'cups') renderCups();
+}
+
+// hediye paneli: 7 günlük seri + çark
+function renderGift() {
+  const ls = loginState(), box = $('days'); box.textContent = '';
+  const dn = Math.max(1, ls.claimed ? ls.n : ls.n + 1);
+  $('loginTitle').textContent = window.PF && window.PF.lang === 'en' ? `Day ${dn}` : `${dn}. gün`;
+  GIFT.forEach((r, i) => {
+    const el = document.createElement('div');
+    const done = i < ls.slot || (ls.claimed && i === ls.slot);
+    el.className = 'day' + (done ? ' done' : '') + (!ls.claimed && i === ls.slot ? ' today' : '') + (i === GIFT.length - 1 ? ' big' : '');
+    el.innerHTML = `<span>${i + 1}</span><svg><use href="#i-sugar"/></svg><b>${r}</b>`;
+    box.append(el);
+  });
+  const cb = $('claimBtn');
+  cb.disabled = ls.claimed;
+  cb.textContent = ls.claimed ? tr('Yarın yeni hediye') : `${tr('Hediyeyi al')} +${GIFT[ls.slot]}`;
+  const sp = spinState(), btn = $('spinBtn');
+  btn.disabled = !!wheelAnim || (!sp.free && !sp.extra);
+  $('spinLbl').textContent = sp.free ? tr('Çarkı çevir') : sp.extra ? tr('Reklam izle, bir daha çevir') : tr('Çark yarın yenilenir');
+  drawWheel();
+}
+let wheelRot = 0, wheelAnim = 0;
+function drawWheel() {
+  const cvw = $('wheel'), d = Math.min(window.devicePixelRatio || 1, 2), R = 120;
+  if (cvw.width !== 240 * d) { cvw.width = cvw.height = 240 * d; }
+  const g = cvw.getContext('2d'), n = WHEEL.length, seg = TAU / n;
+  g.setTransform(d, 0, 0, d, 0, 0); g.clearRect(0, 0, 240, 240);
+  g.translate(R, R); g.rotate(wheelRot);
+  const cols = ['#fff6e8', '#c0452a', '#f6dcb8', '#9a2b17'];
+  for (let i = 0; i < n; i++) {
+    const a0 = -Math.PI / 2 + i * seg, jack = WHEEL[i].v >= 100;
+    g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, R - 6, a0, a0 + seg); g.closePath();
+    g.fillStyle = jack ? '#e8b64a' : cols[i % 4]; g.fill();
+    g.strokeStyle = 'rgba(90,30,10,.25)'; g.lineWidth = 1; g.stroke();
+    g.save(); g.rotate(a0 + seg / 2); g.translate(R * .64, 0); g.rotate(Math.PI / 2);
+    const light = !jack && i % 2 === 1;
+    g.fillStyle = light ? '#fff4e6' : '#5a1c12';
+    g.font = `800 ${jack ? 22 : 19}px Fraunces, Georgia, serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(WHEEL[i].v, 0, 0);
+    // küçük şeker küpü
+    g.translate(0, 17); g.fillStyle = light ? 'rgba(255,244,230,.9)' : 'rgba(90,28,18,.75)';
+    g.beginPath(); g.moveTo(0, -5); g.lineTo(5, -2.5); g.lineTo(5, 3); g.lineTo(0, 5.5); g.lineTo(-5, 3); g.lineTo(-5, -2.5); g.closePath(); g.fill();
+    g.restore();
+  }
+  // pirinç çember + göbek
+  const rim = g.createLinearGradient(-R, -R, R, R);
+  rim.addColorStop(0, '#f7dc92'); rim.addColorStop(.5, '#c08f36'); rim.addColorStop(1, '#8a5e1c');
+  g.beginPath(); g.arc(0, 0, R - 3, 0, TAU); g.strokeStyle = rim; g.lineWidth = 6; g.stroke();
+  for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + i * seg; g.beginPath(); g.arc(Math.cos(a) * (R - 3), Math.sin(a) * (R - 3), 2.6, 0, TAU); g.fillStyle = '#fff3c4'; g.fill(); }
+  g.beginPath(); g.arc(0, 0, 18, 0, TAU); g.fillStyle = rim; g.fill();
+  g.beginPath(); g.arc(0, 0, 9, 0, TAU); g.fillStyle = '#5a1c12'; g.fill();
+}
+function askSpin() {
+  if (wheelAnim || G.panel !== 'gift') return;
+  const sp = spinState();
+  if (sp.free) { spin(); return; }
+  if (!sp.extra) return;
+  $('spinBtn').disabled = true;
+  window.PF.rewarded((ok) => { if (ok) spin(); else { renderGift(); $('spinLbl').textContent = tr('Reklam şu an yok, sonra tekrar dene'); } });
+}
+function spin() {
+  store.set('ck_spin', dayKey() + '|' + (spinsUsed() + 1));
+  ST.spins++; saveStats();
+  // ağırlıklı seçim
+  let r = Math.random() * WHEEL.reduce((a, s) => a + s.w, 0), k = 0;
+  while (r >= WHEEL[k].w) { r -= WHEEL[k].w; k++; }
+  const n = WHEEL.length, seg = TAU / n;
+  const from = wheelRot % TAU;
+  const to = TAU * 5 + (TAU - (k + .5) * seg) + rand(-.36, .36) * seg;
+  const t0 = performance.now(), dur = 4200;
+  let lastSeg = Math.floor(from / seg);
+  show('wheelWin', false);
+  $('spinBtn').disabled = true;
+  const stepFn = (now) => {
+    const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 4);
+    wheelRot = from + (to - from) * e;
+    const sgi = Math.floor(wheelRot / seg);
+    if (sgi !== lastSeg) { lastSeg = sgi; Snd.tick(); }
+    drawWheel();
+    if (t < 1) { wheelAnim = requestAnimationFrame(stepFn); return; }
+    wheelAnim = 0;
+    const v = WHEEL[k].v;
+    Wallet.add(v);
+    if (v >= 100) { Snd.record(); vibrate([30, 40, 30]); } else { Snd.chime(); vibrate([20, 30, 20]); }
+    $('wheelWin').innerHTML = `<span>+${v} <svg style="width:22px;height:22px;vertical-align:-3px"><use href="#i-sugar"/></svg></span>`;
+    show('wheelWin', true);
+    checkAch(); renderGift();
+  };
+  wheelAnim = requestAnimationFrame(stepFn);
+}
+
+// başarımlar: bir kez kazanılır, şeker ödülü anında cüzdana
+const ACH = [
+  { id: 'h10', name: 'İlk kat', desc: 'Bir elde 10 bardak diz', n: 10, r: 20, v: () => ST.bestH },
+  { id: 'h25', name: 'Mahalle kahvesi', desc: 'Bir elde 25 bardak diz', n: 25, r: 50, v: () => ST.bestH },
+  { id: 'h50', name: 'Galata boyu', desc: 'Bir elde 50 bardak diz', n: 50, r: 150, v: () => ST.bestH },
+  { id: 'c5', name: 'Usta eli', desc: 'Üst üste 5 mükemmel', n: 5, r: 25, v: () => ST.bestCombo },
+  { id: 'c10', name: 'Ayar ustası', desc: 'Üst üste 10 mükemmel', n: 10, r: 60, v: () => ST.bestCombo },
+  { id: 'c20', name: 'Tek nefes', desc: 'Üst üste 20 mükemmel', n: 20, r: 150, v: () => ST.bestCombo },
+  { id: 's30', name: 'Demli', desc: 'Bir elde 30 puan', n: 30, r: 25, v: () => ST.bestScore },
+  { id: 's60', name: 'Tavşan kanı', desc: 'Bir elde 60 puan', n: 60, r: 60, v: () => ST.bestScore },
+  { id: 's100', name: 'Çaycıbaşı', desc: 'Bir elde 100 puan', n: 100, r: 150, v: () => ST.bestScore },
+  { id: 'g10', name: 'Yaldız', desc: '10 yaldızlı bardak diz', n: 10, r: 30, v: () => ST.gold },
+  { id: 'g50', name: 'Altın tepsi', desc: '50 yaldızlı bardak diz', n: 50, r: 100, v: () => ST.gold },
+  { id: 't100', name: 'Yüz bardak', desc: 'Toplam 100 bardak', n: 100, r: 30, v: () => G.total },
+  { id: 't500', name: 'Beş yüz bardak', desc: 'Toplam 500 bardak', n: 500, r: 80, v: () => G.total },
+  { id: 't1000', name: 'Bin bardak', desc: 'Toplam 1000 bardak', n: 1000, r: 200, v: () => G.total },
+  { id: 'd3', name: 'Müdavim', desc: 'Günlük çayda 3 günlük seri', n: 3, r: 40, v: () => ST.dailyBest },
+  { id: 'd7', name: 'Kahvenin demirbaşı', desc: 'Günlük çayda 7 günlük seri', n: 7, r: 120, v: () => ST.dailyBest },
+  { id: 'l7', name: 'Bir hafta', desc: '7 gün üst üste hediye al', n: 7, r: 60, v: () => ST.loginBest },
+  { id: 'k4', name: 'Koleksiyoncu', desc: '4 bardak tasarımı aç', n: 4, r: 50, v: () => SKINS.filter((s, i) => skinOpen(i)).length },
+  { id: 'k9', name: 'Tam takım', desc: 'Bütün bardakları aç', n: SKINS.length, r: 300, v: () => SKINS.filter((s, i) => skinOpen(i)).length },
+];
+const achDone = new Set(store.get('ck_ach', '').split(',').filter(Boolean));
+// günlük görevler: her gün tarihten seçilen 3 görev, best olanlar tek elde en iyi değere bakar
+const MIS = [
+  { k: 'glass', t: 'Bugün {n} bardak diz', n: [40, 60, 90], r: [30, 45, 70] },
+  { k: 'perfect', t: 'Bugün {n} mükemmel', n: [15, 25, 40], r: [30, 45, 70] },
+  { k: 'height', t: 'Bir elde {n} bardak diz', n: [12, 18, 25], r: [30, 45, 70], best: true },
+  { k: 'combo', t: 'Üst üste {n} mükemmel', n: [4, 6, 8], r: [30, 45, 70], best: true },
+  { k: 'gold', t: 'Bugün {n} yaldızlı bardak', n: [3, 5, 8], r: [30, 50, 70] },
+  { k: 'runs', t: 'Bugün {n} el oyna', n: [3, 5, 8], r: [20, 35, 50] },
+  { k: 'daily', t: 'Günlük çayı oyna', n: [1, 1, 1], r: [40, 40, 40] },
+];
+let MS = null;
+function missions() {
+  if (MS && MS.key === dayKey()) return MS;
+  try { MS = JSON.parse(store.get('ck_mis', 'null')); } catch (e) { MS = null; }
+  if (!MS || MS.key !== dayKey()) {
+    const r = seeded(+dayKey().replace(/-/g, '') * 13 + 5); r();
+    const pool = MIS.map((m, i) => i), list = [];
+    while (list.length < 3) { const i = pool.splice(r() * pool.length | 0, 1)[0]; list.push({ i, l: r() * 3 | 0, p: 0, done: false }); }
+    MS = { key: dayKey(), list };
+    store.set('ck_mis', JSON.stringify(MS));
+  }
+  return MS;
+}
+function misText(m) { const d = MIS[m.i]; return tr(d.t).replace('{n}', d.n[m.l]); }
+function misEvent(k, v) {
+  const ms = missions(); let changed = false;
+  for (const m of ms.list) {
+    const d = MIS[m.i]; if (d.k !== k || m.done) continue;
+    const p = d.best ? Math.max(m.p, v) : m.p + v;
+    if (p === m.p) continue;
+    m.p = p; changed = true;
+    if (p >= d.n[m.l]) { m.done = true; Wallet.add(d.r[m.l]); toast(`✅ ${misText(m)} <em>+${d.r[m.l]}</em>`); Snd.chime(); }
+  }
+  if (changed) store.set('ck_mis', JSON.stringify(ms));
+}
+function checkAch() {
+  for (const a of ACH) {
+    if (achDone.has(a.id) || a.v() < a.n) continue;
+    achDone.add(a.id); store.set('ck_ach', [...achDone].join(','));
+    Wallet.add(a.r);
+    toast(`🏆 ${tr(a.name)} <em>+${a.r}</em>`);
+  }
+  if (G.panel === 'ach') renderAch();
+}
+function renderAch() {
+  const list = $('achList'); list.textContent = '';
+  const head = (txt) => { const h = document.createElement('div'); h.className = 'list-head'; h.textContent = txt; list.append(h); };
+  const ms = missions();
+  head(`${tr('Bugünün görevleri')} · ${ms.list.filter((m) => m.done).length}/3`);
+  for (const m of ms.list) {
+    const d = MIS[m.i], n = d.n[m.l], v = Math.min(m.p, n);
+    const el = document.createElement('div'); el.className = 'ach mis' + (m.done ? ' done' : '');
+    el.innerHTML = `<b></b><span class="rw">${m.done ? '✓' : `+${d.r[m.l]}<svg><use href="#i-sugar"/></svg>`}</span><small>${v}/${n}</small>` + (m.done ? '' : `<div class="bar"><i style="width:${(v / n * 100).toFixed(1)}%"></i></div>`);
+    el.querySelector('b').textContent = misText(m);
+    list.append(el);
+  }
+  head(`${tr('Başarımlar')} · ${achDone.size}/${ACH.length}`);
+  const sorted = ACH.slice().sort((a, b) => achDone.has(a.id) - achDone.has(b.id));
+  for (const a of sorted) {
+    const done = achDone.has(a.id), v = Math.min(a.v(), a.n);
+    const el = document.createElement('div'); el.className = 'ach' + (done ? ' done' : '');
+    el.innerHTML = `<b></b><span class="rw">${done ? '✓' : `+${a.r}<svg><use href="#i-sugar"/></svg>`}</span><small></small>` + (done ? '' : `<div class="bar"><i style="width:${(v / a.n * 100).toFixed(1)}%"></i></div>`);
+    el.querySelector('b').textContent = tr(a.name);
+    el.querySelector('small').textContent = done ? tr(a.desc) : `${tr(a.desc)} · ${v}/${a.n}`;
+    list.append(el);
+  }
+}
+// üstte kısa bildirim (sıralı)
+const toastQ = [];
+let toastBusy = false;
+function toast(html) { toastQ.push(html); if (!toastBusy) nextToast(); }
+function nextToast() {
+  const el = $('toast'), h = toastQ.shift();
+  if (!h) { toastBusy = false; show('toast', false); return; }
+  toastBusy = true;
+  el.innerHTML = `<svg><use href="#i-sugar"/></svg><span>${h}</span>`;
+  show('toast', false); void el.offsetWidth; show('toast', true);
+  setTimeout(nextToast, 2400);
+}
+function share() {
+  const url = 'https://ardazeybek-dev.github.io/tea-tower/';
+  const text = `${tr('Çay Kulesi')}: ${G.score} ${tr('puanlık kule diktim!')} 🍵`;
+  try {
+    if (navigator.share) { navigator.share({ title: tr('Çay Kulesi'), text, url }).catch(() => {}); return; }
+    navigator.clipboard.writeText(text + ' ' + url).then(() => toast(tr('Kopyalandı')), () => {});
+  } catch (e) {}
 }
 
 // ------------------------------------------------------------------ effects
@@ -1305,6 +1608,11 @@ function show(id, on) { const el = $(id); if (el) el.classList.toggle('hidden', 
 const ui = {
   score(v, bump) { const el = $('score'); el.textContent = v; if (bump) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); setTimeout(() => el.classList.remove('bump'), 160); } },
   combo(txt) { const el = $('combo'); if (txt) { el.textContent = txt; el.classList.add('show'); } else el.classList.remove('show'); },
+  wallet(gain) {
+    document.querySelectorAll('.walletN').forEach((el) => { el.textContent = Wallet.n; });
+    const w = document.querySelector('.wallet');
+    if (gain && w && G.state === 'title') { w.classList.remove('gain'); void w.offsetWidth; w.classList.add('gain'); }
+  },
 };
 function pause() {
   if (G.state !== 'playing' && G.state !== 'toppling') return;
@@ -1337,13 +1645,18 @@ $('resumeBtn').addEventListener('click', (e) => { e.stopPropagation(); resume();
 $('homeBtn').addEventListener('click', (e) => { e.stopPropagation(); goHome(); });
 $('againBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); startGame(); });
 $('reviveBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askRevive(); });
-$('dailyBtn').addEventListener('click', (e) => { e.stopPropagation(); if (G.state === 'title' && !G.cupsOpen) startGame('daily'); });
-$('cupsBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openCups(); });
-$('cupsClose').addEventListener('click', (e) => { e.stopPropagation(); closeCups(); });
+$('dailyBtn').addEventListener('click', (e) => { e.stopPropagation(); if (G.state === 'title' && !G.panel) startGame('daily'); });
+$('cupsBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('cups'); });
+$('giftBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('gift'); });
+$('achBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('ach'); });
+for (const id of ['cupsClose', 'giftClose', 'achClose']) $(id).addEventListener('click', (e) => { e.stopPropagation(); closePanel(); });
+$('claimBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); claimGift(); });
+$('spinBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askSpin(); });
+$('shareBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (G.state === 'paused') resume(); else { Snd.init(); tap(); } }
-  else if (e.code === 'KeyP' || e.code === 'Escape') { if (G.cupsOpen) closeCups(); else G.state === 'paused' ? resume() : pause(); }
+  else if (e.code === 'KeyP' || e.code === 'Escape') { if (G.panel) closePanel(); else G.state === 'paused' ? resume() : pause(); }
   else if (e.code === 'KeyM') { Snd.init(); Snd.toggle(); syncMute(); }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); Snd.suspend(); } });
@@ -1387,6 +1700,9 @@ window.__game = {
   get canRevive() { const b = $('reviveBtn'); return G.state === 'over' && !b.classList.contains('hidden'); },
   get daily() { return G.mod ? G.mod.name : null; }, get revived() { return G.revived; },
   setTotal(n) { G.total = n; store.set('ck_total', n); }, selectSkin, revive: () => askRevive(), openCups, closeCups,
+  get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
+  get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
+  get offerRevive() { return G.offerRevive; },
   start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR,
   setTimeScale(s) { G.timeScale = s; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
@@ -1407,6 +1723,8 @@ syncMute();
 $('titleBest').querySelector('b').textContent = G.best;
 refreshTitle();
 demoTower();
+// günün ilk açılışında hediye paneli kendiliğinden gelsin
+if (!loginState().claimed) setTimeout(() => openPanel('gift'), 700);
 G.cam.y = G.cam.ty = camMinY() - H * .07 / S; G.cam.x = 0;
 requestAnimationFrame(frame);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {});

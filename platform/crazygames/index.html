@@ -10,7 +10,11 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sugar" viewBox="0 0 24 24"><path d="M12 2.6l8.4 4.6v9.6L12 21.4l-8.4-4.6V7.2z" fill="#e8dcc8"/><path d="M12 2.6l8.4 4.6L12 11.8 3.6 7.2z" fill="#fffaf0"/><path d="M12 11.8l8.4-4.6v9.6L12 21.4z" fill="#cdbca2"/><path d="M12 2.6l8.4 4.6v9.6L12 21.4l-8.4-4.6V7.2z" fill="none" stroke="rgba(90,40,20,.45)" stroke-width="1.1" stroke-linejoin="round"/></symbol>
+</svg>
 <canvas id="c" aria-label="Çay Kulesi oyun alanı"></canvas>
+<div id="toast" class="hidden"></div>
 
 <div id="hud" class="hidden">
   <button id="pauseBtn" class="icon-btn" aria-label="Duraklat">
@@ -28,7 +32,7 @@
 
 <div id="title" class="screen">
   <div class="top-row">
-    <span></span>
+    <div class="wallet" aria-label="Şeker"><svg><use href="#i-sugar"/></svg><b class="walletN">0</b></div>
     <button class="icon-btn soundBtn" aria-label="Sesi aç/kapat">
       <svg class="on" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
       <svg class="off" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
@@ -45,6 +49,8 @@
     <div class="modes">
       <button id="dailyBtn" class="mode-btn"><b>Günlük çay</b><small id="dailySub"></small></button>
       <button id="cupsBtn" class="mode-btn"><b>Bardaklar</b><small>Koleksiyon</small></button>
+      <button id="giftBtn" class="mode-btn"><b>Hediye</b><small id="giftSub">Çark ve seri</small></button>
+      <button id="achBtn" class="mode-btn"><b>Görevler</b><small id="achSub"></small></button>
     </div>
   </div>
 </div>
@@ -67,6 +73,7 @@
 
 <div id="cups" class="screen dim hidden">
   <div class="panel cups-panel">
+    <div class="panel-wallet"><svg><use href="#i-sugar"/></svg><b class="walletN">0</b></div>
     <div class="eyebrow">Koleksiyon</div>
     <h2>Bardaklar</h2>
     <p class="cup-total" id="cupTotal"></p>
@@ -75,8 +82,35 @@
   </div>
 </div>
 
+<div id="gift" class="screen dim hidden">
+  <div class="panel gift-panel">
+    <div class="panel-wallet"><svg><use href="#i-sugar"/></svg><b class="walletN">0</b></div>
+    <div class="eyebrow">Günlük hediye</div>
+    <h2 id="loginTitle">1. gün</h2>
+    <div class="days" id="days"></div>
+    <button id="claimBtn" class="btn primary small">Hediyeyi al</button>
+    <div class="wheel-wrap">
+      <div class="wheel-pin"></div>
+      <canvas id="wheel" width="240" height="240"></canvas>
+      <div class="wheel-win hidden" id="wheelWin"></div>
+    </div>
+    <button id="spinBtn" class="btn primary"><svg class="ad-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="14" height="13" rx="3"/><path d="M17.5 10.2l4-2.4v8.4l-4-2.4z"/></svg><span id="spinLbl">Çarkı çevir</span></button>
+    <button id="giftClose" class="btn ghost">Kapat</button>
+  </div>
+</div>
+
+<div id="ach" class="screen dim hidden">
+  <div class="panel ach-panel">
+    <div class="eyebrow">Her gün yenilenir</div>
+    <h2>Görevler</h2>
+    <div class="ach-list" id="achList"></div>
+    <button id="achClose" class="btn primary">Kapat</button>
+  </div>
+</div>
+
 <div id="over" class="screen sheet hidden">
   <div class="panel">
+    <button id="shareBtn" class="share-btn" aria-label="Paylaş"><svg viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
     <div class="mode-tag hidden" id="overMode"></div>
     <div class="eyebrow" id="overReason">Kule devrildi</div>
     <div class="final"><span id="finalScore">0</span><small>puan</small></div>
@@ -86,11 +120,12 @@
       <div><b id="statPerfect">0</b><span>Mükemmel</span></div>
       <div><b id="statCombo">0</b><span>En uzun kombo</span></div>
     </div>
+    <div class="earn" id="earnNote"><svg><use href="#i-sugar"/></svg><b id="earnN">+0</b> <span>şeker</span></div>
     <div class="unlock hidden" id="unlockNote"></div>
     <button id="reviveBtn" class="btn primary hidden"><svg class="ad-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="14" height="13" rx="3"/><path d="M17.5 10.2l4-2.4v8.4l-4-2.4z"/></svg><span id="reviveLbl">İkinci şans</span></button>
     <div class="revive-note hidden" id="reviveNote"></div>
     <button id="againBtn" class="btn primary">Bir el daha</button>
-    <div class="hint">ya da ekrana dokun</div>
+    <div class="hint" id="overHint">ya da ekrana dokun</div>
   </div>
 </div>
 
