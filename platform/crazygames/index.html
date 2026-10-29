@@ -44,7 +44,7 @@
     </div>
   </div>
   <div class="logo">
-    <div class="eyebrow">Boğaz'a karşı</div>
+    <div class="eyebrow" id="venueEyebrow">Boğaz'a karşı</div>
     <h1>Çay <em>Kulesi</em></h1>
   </div>
   <div class="bottom">
@@ -53,7 +53,7 @@
     <div class="cta"><span class="dot"></span>Başlamak için dokun</div>
     <div class="modes">
       <button id="dailyBtn" class="mode-btn"><b>Günlük çay</b><small id="dailySub"></small></button>
-      <button id="cupsBtn" class="mode-btn"><b>Bardaklar</b><small>Koleksiyon</small></button>
+      <button id="cupsBtn" class="mode-btn"><b>Koleksiyon</b><small>Bardak · mekân</small></button>
       <button id="giftBtn" class="mode-btn"><b>Hediye</b><small id="giftSub">Çark ve seri</small></button>
       <button id="achBtn" class="mode-btn"><b>Görevler</b><small id="achSub"></small></button>
     </div>
@@ -81,7 +81,8 @@
   <div class="panel cups-panel">
     <div class="panel-wallet"><svg><use href="#i-sugar"/></svg><b class="walletN">0</b></div>
     <div class="eyebrow">Koleksiyon</div>
-    <h2>Bardaklar</h2>
+    <h2 id="cupsTitle">Bardaklar</h2>
+    <div class="seg tabs" id="cupTabs"><button data-t="cups" aria-pressed="true">Bardaklar</button><button data-t="venues" aria-pressed="false">Mekânlar</button></div>
     <p class="cup-total" id="cupTotal"></p>
     <div class="cup-grid" id="cupGrid"></div>
     <button id="cupsClose" class="btn primary">Kapat</button>

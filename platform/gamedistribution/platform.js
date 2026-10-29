@@ -63,7 +63,18 @@
     'Bugün {n} bardak diz': 'Stack {n} glasses today', 'Bugün {n} mükemmel': '{n} perfects today',
     'Bir elde {n} bardak diz': 'Stack {n} glasses in one run', 'Üst üste {n} mükemmel': '{n} perfects in a row',
     'Bugün {n} yaldızlı bardak': '{n} gilded glasses today', 'Bugün {n} el oyna': 'Play {n} runs today',
-    'Günlük çayı oyna': 'Play the Daily tea'
+    'Günlük çayı oyna': 'Play the Daily tea',
+    // ayarlar
+    'Ayarlar': 'Settings', 'Tercihler': 'Preferences', 'Ses efektleri': 'Sound effects', 'Bardak, kombo, devrilme': 'Glasses, combos, crashes',
+    'Ortam sesi': 'Ambience', 'Dalga, rüzgâr, kuşlar': 'Waves, wind, birds', 'Titreşim': 'Vibration', 'Dokunuşta hafif titreşim': 'A light buzz on taps',
+    'Grafik': 'Graphics', 'Pil dostu': 'Battery saver', 'Otomatik': 'Auto', 'Yüksek': 'High',
+    'Daha az efekt, daha uzun pil': 'Fewer effects, longer battery', 'Cihaza göre kendini ayarlar': 'Adjusts to your device', 'En keskin görüntü': 'The sharpest picture',
+    'Öğreticiyi göster': 'Show the tutorial', 'Bir sonraki elde ipucu': 'A hint on your next run', 'Bir sonraki elde gösterilecek': 'It will show on your next run',
+    // mekânlar
+    'Bardak · mekân': 'Glasses · places', 'Mekânlar': 'Places', 'Boğaz': 'Bosphorus', 'Kapadokya': 'Cappadocia',
+    'Üsküdar kıyısı': 'Üsküdar shore', 'Çay bahçesi': 'Tea garden', 'Peri bacaları': 'Fairy chimneys', 'Ege koyu': 'Aegean bay',
+    'Çay bahçesinde': 'In the tea garden', 'Peri bacalarına karşı': 'By the fairy chimneys', "Ege'ye karşı": 'By the Aegean',
+    'Yeni mekân açıldı': 'New place unlocked', 'Sıradaki mekân': 'Next place', 'Gezgin': 'Traveller', 'Bütün mekânları aç': 'Unlock every place'
   };
   var lang = 'en';
   try { var l = (navigator.languages && navigator.languages[0]) || navigator.language || ''; if (/^tr\b/i.test(l)) lang = 'tr'; } catch (e) {}

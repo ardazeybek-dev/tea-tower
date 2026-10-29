@@ -23,14 +23,16 @@ A one-thumb stacking game set on a tea terrace facing the Bosphorus. A brass tea
 - **Sugar:** the in-game currency. Every glass stacked gives 1, a perfect drop +1 and a gilded glass +2, credited as you play. Gifts, the wheel, missions and achievements pay sugar too.
 - **Gifts:** a 7-day login streak (20, 30, 40, 60, 80, 100, 150 sugar; a missed day starts over) and a daily wheel with one free spin. On the portal builds a rewarded ad gives one extra spin. The panel opens by itself on the first visit of the day.
 - **Missions:** three daily missions picked from the date (stack, perfects, height, combo, gilded, runs, Daily tea), plus 19 permanent achievements. Both pay sugar the moment they are done.
+- **Places:** four backdrops for the same tea terrace: Bosphorus (Üsküdar shore, ferry and Maiden's Tower), Rize (tea garden hills, drifting mist, birdsong), Cappadocia (fairy chimneys, Uçhisar and hot-air balloons) and Bodrum (white houses, windmills, the castle and a gulet). Rize, Cappadocia and Bodrum unlock at 120, 260 and 450 glasses, or earlier with sugar (300, 550, 850). Pick one under *Collection → Places*. Places only change the look and the ambience. The rules, the swing and Daily tea are the same everywhere.
+- **Settings:** the slider button on the title screen or *Settings* in the pause menu. Sound effects and ambience switch separately (the speaker button still mutes everything), vibration can be turned off where the device supports it, the tutorial can be shown again, and graphics run in *Auto* (adaptive resolution), *High* (sharper on high-DPI screens, still drops resolution if the frame rate falls) or *Battery saver* (lower resolution, fewer particles, stars and sea glints).
 - **Share:** the game-over sheet shares the score with the Web Share API, or copies it to the clipboard. It is hidden on the portal builds.
 
 ## Features
 
-- Canvas2D renderer with no build step and no dependencies. Every sprite (glasses, saucers, brass tray, kilim tablecloth, Istanbul skyline) is drawn in code and cached once per resolution.
-- All audio is synthesized with WebAudio: glass clinks, perfect-drop notes that rise along the Hicaz scale, a sea ambience and seagulls.
+- Canvas2D renderer with no build step and no dependencies. Every sprite (glasses, saucers, brass tray, kilim tablecloth, the four place skylines) is drawn in code and cached once per resolution. Only the active place is built; switching rebuilds it once, never during a run.
+- All audio is synthesized with WebAudio: glass clinks, perfect-drop notes that rise along the Hicaz scale, and an ambience per place (sea and seagulls, or wind and birdsong) on its own channel.
 - Installable PWA that works offline (manifest + service worker), with high-DPI rendering, safe-area insets and adaptive resolution.
-- Best score, daily best and streak, lifetime glass count, chosen design, sugar, owned designs, gift streak, wheel spins, missions, achievements and stats are saved in `localStorage` (`ck_*` keys).
+- Best score, daily best and streak, lifetime glass count, chosen design, sugar, owned designs, gift streak, wheel spins, missions, achievements, stats, the chosen and bought places (`ck_venue`, `ck_vowned`) and settings (`ck_set`) are saved in `localStorage` (`ck_*` keys).
 
 ## Run locally
 
@@ -76,7 +78,7 @@ platform/
 ## Gotchas
 
 - Changes not showing after deploy → the service worker serves cached assets → bump `CACHE` in `docs/sw.js` (install fetches with `cache: 'reload'` so the new cache never stores HTTP-cached old files).
-- Headless browser FPS looks very low → software rasterization at DPR 3 → measure with a GPU-backed browser. `window.__game.perf()` reports FPS and per-frame JS time.
+- Headless timings look terrible → software rasterization, and `step()` in a tight loop queues frames that a later `getImageData` (place rebuild) has to wait for → compare places with the real rAF loop: wait, then read `window.__game.perf()` (FPS and per-frame JS time).
 - `build.py` stops with "expected 1 match" → a line it patches in `docs/game.js` changed → update the matching `sub1` call in `build.py`.
 - Portal SDK logs "gameplayStart() call throttled" in tests → start/stop closer than 1 s → leave real time between rounds.
 - Automated tests are flaky on timing → headless rAF is throttled → drive the game with `window.__game.setTimeScale(0)` plus `step()`, `aimPerfect()` and `aimOffset(x)`.

@@ -225,3 +225,23 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .seg button[aria-pressed="true"]{background:#fff6e8;color:#5a1c12;box-shadow:0 2px 8px rgba(90,30,10,.18)}
 .chev{width:18px;height:18px;flex:none;fill:none;stroke:#7a3a28;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 @media (max-height:640px){.set-panel{padding:18px 18px 16px}.set-panel h2{margin:4px 0 10px;font-size:26px}.set-row{min-height:48px;padding:7px 12px}.set-gfx{padding:8px 12px 9px}.set-list{gap:5px;margin-bottom:12px}}
+
+/* koleksiyon sekmeleri + mekânlar */
+.seg.tabs{margin:0 0 10px;position:relative}
+.seg.tabs.dot-v button[data-t="venues"]::after{content:"";display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:#e0a83a;vertical-align:2px}
+.venue-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px}
+.venue{display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:5px 5px 8px;border-radius:16px;background:linear-gradient(180deg,#5a3a4a,#3a2232);
+  border:2px solid transparent;color:var(--cream);transition:transform .12s;text-align:center}
+.venue:active{transform:scale(.96)}
+.venue .vthumb{position:static;inset:auto;width:100%;height:auto;aspect-ratio:150/88;border-radius:11px;touch-action:auto;margin-bottom:4px}
+.venue b{font-size:14px;font-weight:900}
+.venue span{font-size:11px;font-weight:700;opacity:.8;min-height:14px}
+.venue .price{display:flex;align-items:center;gap:3px;justify-content:center}
+.venue .price svg{width:13px;height:13px}
+.venue .price i{font-style:normal;opacity:.7}
+.venue.on{border-color:#f4c95d;box-shadow:0 0 0 3px rgba(244,201,93,.25)}
+.venue.locked{cursor:default}
+.venue.locked .vthumb{filter:grayscale(.85) brightness(.55)}
+.venue.locked b{opacity:.6}
+.venue.buy{background:linear-gradient(180deg,#6a4a3a,#4a2e24)}
+@media (max-height:760px){.mode-btn small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}}

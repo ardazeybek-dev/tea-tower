@@ -368,11 +368,24 @@ function buildSprites() {
   SPR.warm = makeGlow([255, 196, 120]);
   SPR.spark = makeSpark();
   SPR.softM = { c: SPR.soft };
+  SPR.mistM = { c: SPR.soft };
   SPR.contact = sprite(90, 20, 45, 10, (g) => softEllipse(g, 0, 0, 40, 6.5, [40, 14, 6], .42));
   SPR.kilimPattern = ctx.createPattern(SPR.tile.c, 'repeat');
 }
 
-// ------------------------------------------------------------------ background (ekran uzayı maskeleri)
+// ------------------------------------------------------------------ mekânlar (yalnızca görünüm ve ses; oyun kuralları her yerde aynı)
+// renk çiftleri [renk, oran]: vaktin rengi bu oranda mekânın rengine çekilir, gece etkisi azalır
+const VENUES = [
+  { id: 'bogaz', name: 'Boğaz', sub: 'Üsküdar kıyısı', eyebrow: "Boğaz'a karşı", need: 0, water: true, call: 'gull' },
+  { id: 'rize', name: 'Rize', sub: 'Çay bahçesi', eyebrow: 'Çay bahçesinde', need: 120, price: 300, water: false, call: 'bird',
+    far: ['#4c6e66', .45], city: ['#3a7a3a', .62], ground: ['#6aa04a', '#2a5a2e', .7], rows: ['#1f4a24', .6] },
+  { id: 'kapadokya', name: 'Kapadokya', sub: 'Peri bacaları', eyebrow: 'Peri bacalarına karşı', need: 260, price: 550, water: false, call: 'none',
+    far: ['#b4806a', .42], city: ['#d8a67c', .55], ground: ['#cc965f', '#7c4c32', .68] },
+  { id: 'bodrum', name: 'Bodrum', sub: 'Ege koyu', eyebrow: "Ege'ye karşı", need: 450, price: 850, water: true, call: 'gull',
+    far: ['#6e8a62', .42], city: ['#f6f1e8', .72], sea: ['#2c8cb4', '#0c5a84', .45] },
+].map((v) => { for (const k of ['far', 'city', 'ground', 'rows', 'sea']) if (v[k]) v[k] = v[k].map((c) => typeof c === 'string' ? hex(c) : c); return v; });
+const vtint = (base, t, night) => t ? mixc(base, t[0], t[1] * (1 - night * .75)) : base;
+
 function maskCanvas(w, h) { const c = mk(w, h); return { c, g: c.getContext('2d') }; }
 function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 function drawMosque(g, x, base, u, r, mins) {
@@ -393,10 +406,24 @@ function drawMosque(g, x, base, u, r, mins) {
     g.beginPath(); g.moveTo(mx - mw * .62, base - mh); g.lineTo(mx, base - mh - 15 * u * r); g.lineTo(mx + mw * .62, base - mh); g.fill();
   }
 }
-function buildBackground() {
-  const u = S * DPR;
-  const bw = Math.ceil(W * DPR * 1.5), bh = Math.ceil(170 * u);
-  const rnd = seeded(7);
+// gece pencereleri: siluetin dolu piksellerinden rastgele noktalar (önizlemede atlanır, getImageData pahalı)
+function winsOf(g, bw, bh, rnd, u, max, depth) {
+  const data = g.getImageData(0, 0, bw, bh).data;
+  const wins = [];
+  for (let i = 0; i < 1400 && wins.length < max; i++) {
+    const px = rnd() * bw | 0, py = (bh - rnd() * depth * u) | 0;
+    if (py > 0 && py < bh - 3 * u && data[(py * bw + px) * 4 + 3] > 200) wins.push([px, py, rnd()]);
+  }
+  return wins;
+}
+function ridgeMask(bw, bh, u, fn, step) {
+  const m = maskCanvas(bw, bh), g = m.g;
+  g.fillStyle = '#fff'; g.beginPath(); g.moveTo(0, bh);
+  for (let x = 0; x <= bw; x += step || 5) g.lineTo(x, bh - fn(x / bw, x) * u);
+  g.lineTo(bw, bh); g.fill();
+  return m;
+}
+function sceneBogaz(u, bw, bh, rnd, thumb) {
   // uzak tepeler
   const far = maskCanvas(bw, bh);
   far.g.fillStyle = '#fff';
@@ -421,13 +448,7 @@ function buildBackground() {
     g.beginPath(); g.moveTo(gx - 8 * u, gb - 58 * u); g.lineTo(gx, gb - 78 * u); g.lineTo(gx + 8 * u, gb - 58 * u); g.fill(); g.fillRect(gx - .7 * u, gb - 84 * u, 1.4 * u, 7 * u); }
   drawMosque(g, bw * .8, bh - 5 * u, u, .7, [[-60, 72, 2], [60, 72, 2], [-74, 60, 1], [74, 60, 1]]);
   drawMosque(g, bw * .97, bh - 3 * u, u, .5, [[-58, 70, 2]]);
-  // gece pencereleri
-  const data = g.getImageData(0, 0, bw, bh).data;
-  const wins = [];
-  for (let i = 0; i < 1400 && wins.length < 170; i++) {
-    const px = rnd() * bw | 0, py = (bh - rnd() * 40 * u) | 0;
-    if (py > 0 && py < bh - 3 * u && data[(py * bw + px) * 4 + 3] > 200) wins.push([px, py, rnd()]);
-  }
+  const wins = thumb ? [] : winsOf(g, bw, bh, rnd, u, 170, 40);
   // kız kulesi
   const kk = maskCanvas(60 * u, 54 * u);
   { const k = kk.g, c = 30 * u; k.fillStyle = '#fff';
@@ -440,6 +461,134 @@ function buildBackground() {
   { const k = fe.g; k.fillStyle = '#fff';
     k.beginPath(); k.moveTo(0, 15 * u); k.lineTo(70 * u, 15 * u); k.lineTo(64 * u, 23 * u); k.lineTo(6 * u, 23 * u); k.fill();
     k.fillRect(8 * u, 9 * u, 54 * u, 6 * u); k.fillRect(14 * u, 4 * u, 40 * u, 5 * u); k.fillRect(31 * u, 0, 6 * u, 5 * u); }
+  return { far, city, wins, kk, fe };
+}
+function sceneRize(u, bw, bh, rnd, thumb) {
+  // kaçkarlar: sivri, yüksek sırtlar
+  const far = ridgeMask(bw, bh, u, (t) => 62 + 26 * Math.sin(t * 5.3 + 2) + 16 * Math.abs(Math.sin(t * 13.7 + .4)) + 6 * Math.sin(t * 37));
+  // çay tepeleri + ahşap evler, ağaç kümeleri, küçük cami
+  const hill = (t) => 34 + 16 * Math.sin(t * 4.2 + .5) + 8 * Math.sin(t * 9.3 + 1.2);
+  const city = ridgeMask(bw, bh, u, hill), g = city.g;
+  for (let x = 20 * u; x < bw; x += (26 + rnd() * 60) * u) {
+    const y = bh - hill(x / bw) * u + 2 * u;
+    if (rnd() < .55) {
+      const w = (8 + rnd() * 6) * u, h = (6 + rnd() * 4) * u;
+      g.fillRect(x - w / 2, y - h, w, h);
+      g.beginPath(); g.moveTo(x - w / 2 - 1.5 * u, y - h); g.lineTo(x, y - h - 5 * u); g.lineTo(x + w / 2 + 1.5 * u, y - h); g.fill();
+    } else for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(x + (k - 1) * 4 * u, y - (4 + rnd() * 4) * u, (3 + rnd() * 2.5) * u, 0, TAU); g.fill(); }
+  }
+  drawMosque(g, bw * .72, bh - hill(.72) * u + 3 * u, u, .42, [[-56, 76, 2]]);
+  // çay sıraları: tepe konturuna paralel ince çizgiler, tepenin içine kırpılır
+  const rows = maskCanvas(bw, bh);
+  { const k = rows.g; k.strokeStyle = '#fff'; k.lineWidth = 1.3 * u;
+    for (let j = 1; j < 10; j++) {
+      k.beginPath();
+      for (let x = 0; x <= bw; x += 8) { const t = x / bw, y = bh - hill(t) * u + j * (3 + j * .6) * u + Math.sin(t * 60 + j) * .6 * u; x ? k.lineTo(x, y) : k.moveTo(x, y); }
+      k.stroke();
+    }
+    k.globalCompositeOperation = 'destination-in'; k.drawImage(city.c, 0, 0); k.globalCompositeOperation = 'source-over'; }
+  const wins = thumb ? [] : winsOf(g, bw, bh, rnd, u, 60, 34);
+  return { far, city, rows, wins };
+}
+function sceneKapadokya(u, bw, bh, rnd, thumb) {
+  // düz tepeli platolar
+  const K = 8, hs = []; for (let i = 0; i <= K; i++) hs.push(30 + rnd() * 34);
+  const far = ridgeMask(bw, bh, u, (t, x) => {
+    const f = t * K, i = Math.min(K - 1, f | 0), e = clamp((f - i - .8) / .2, 0, 1);
+    return lerp(hs[i], hs[i + 1], e * e * (3 - 2 * e)) + Math.sin(x * .05 / u) * 1.2;
+  }, 4);
+  // peri bacaları + uçhisar kalesi
+  const city = ridgeMask(bw, bh, u, (t) => 9 + 5 * Math.sin(t * 9 + 1), 6), g = city.g;
+  const base = bh - 8 * u;
+  const chim = (x, h, w) => {
+    g.beginPath(); g.moveTo(x - w, base);
+    g.bezierCurveTo(x - w * .55, base - h * .35, x - w * .32, base - h * .8, x - w * .18, base - h);
+    g.lineTo(x + w * .18, base - h);
+    g.bezierCurveTo(x + w * .32, base - h * .8, x + w * .55, base - h * .35, x + w, base); g.fill();
+    g.beginPath(); g.ellipse(x, base - h - 1.2 * u, w * .44, 3 * u, 0, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse(x, base - h - 3.4 * u, w * .26, 2.8 * u, 0, Math.PI, 0); g.fill();
+  };
+  for (let x = 6 * u; x < bw; x += (10 + rnd() * 22) * u) {
+    if (Math.abs(x / bw - .34) < .06) continue;
+    const n = 1 + (rnd() * 3 | 0);
+    for (let k = 0; k < n; k++) chim(x + k * 5 * u, (16 + rnd() * 34) * u, (5 + rnd() * 5) * u);
+  }
+  { const cx = bw * .34, b = base + 2 * u;
+    g.beginPath(); g.moveTo(cx - 46 * u, b);
+    g.bezierCurveTo(cx - 40 * u, b - 30 * u, cx - 26 * u, b - 44 * u, cx - 14 * u, b - 50 * u);
+    g.lineTo(cx - 12 * u, b - 70 * u); g.bezierCurveTo(cx - 6 * u, b - 79 * u, cx + 6 * u, b - 79 * u, cx + 12 * u, b - 70 * u);
+    g.lineTo(cx + 16 * u, b - 50 * u); g.bezierCurveTo(cx + 28 * u, b - 42 * u, cx + 40 * u, b - 28 * u, cx + 48 * u, b); g.fill();
+    g.fillRect(cx - .8 * u, b - 88 * u, 1.6 * u, 12 * u); g.fillRect(cx + .8 * u, b - 88 * u, 6 * u, 4 * u); }
+  const wins = thumb ? [] : winsOf(g, bw, bh, rnd, u, 110, 70);
+  // balonlar: renkli, önbelleğe alınmış küçük sprite'lar
+  const pal = [['#d8402e', '#f2c14e', '#2f6fb0'], ['#f08a3c', '#fff1d6'], ['#3a9a6a', '#f2d25e', '#d8402e'], ['#7a4aa8', '#f4b8c8']];
+  const balloons = pal.map((p, i) => makeBalloon(u * (i % 2 ? 1.05 : 1.35), p));
+  return { far, city, wins, balloons };
+}
+function makeBalloon(u, cols) {
+  const r = 9 * u, c = mk(r * 2 + 2, r * 3.2), g = c.getContext('2d');
+  g.translate(r + 1, r + 1);
+  g.save();
+  g.beginPath(); g.arc(0, 0, r, Math.PI * .82, Math.PI * .18);
+  g.quadraticCurveTo(r * .55, r * 1.2, r * .28, r * 1.45); g.lineTo(-r * .28, r * 1.45);
+  g.quadraticCurveTo(-r * .55, r * 1.2, Math.cos(Math.PI * .82) * r, Math.sin(Math.PI * .82) * r); g.closePath(); g.clip();
+  for (let i = 0; i < 6; i++) { g.fillStyle = cols[i % cols.length]; g.fillRect(-r + i * r / 3, -r, r / 3 + 1, r * 2.6); }
+  const sh = g.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r * 1.6);
+  sh.addColorStop(0, 'rgba(255,255,255,.35)'); sh.addColorStop(.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(40,10,10,.45)');
+  g.fillStyle = sh; g.fillRect(-r, -r, r * 2, r * 2.6);
+  g.restore();
+  g.strokeStyle = 'rgba(60,30,20,.7)'; g.lineWidth = Math.max(.6, .1 * r);
+  g.beginPath(); g.moveTo(-r * .26, r * 1.45); g.lineTo(-r * .16, r * 1.86); g.moveTo(r * .26, r * 1.45); g.lineTo(r * .16, r * 1.86); g.stroke();
+  g.fillStyle = '#6a3e1e'; g.fillRect(-r * .2, r * 1.84, r * .4, r * .32);
+  return { c, r };
+}
+function sceneBodrum(u, bw, bh, rnd, thumb) {
+  // adalar + evlerin yaslandığı yamaç
+  const hillH = (t) => 74 * Math.exp(-Math.pow((t - .46) / .2, 2));
+  const far = ridgeMask(bw, bh, u, (t) => Math.max(20 + 9 * Math.sin(t * 6.1 + .4) + 5 * Math.sin(t * 17.3), hillH(t) + 3 * Math.sin(t * 23)));
+  // beyaz kübik evler, sırtta yel değirmenleri, kıyıda kale
+  const city = maskCanvas(bw, bh), g = city.g; g.fillStyle = '#fff';
+  g.fillRect(0, bh - 3 * u, bw, 3 * u);
+  for (let i = 0; i < 190; i++) {
+    const t = .24 + rnd() * .46, top = hillH(t);
+    if (top < 12) continue;
+    const yy = top * (.04 + rnd() * .8), w = (4 + rnd() * 6) * u, h = (3 + rnd() * 4) * u;
+    g.fillRect(t * bw - w / 2, bh - yy * u - h, w, h);
+  }
+  for (const t of [.38, .43, .5, .55]) {
+    const x = t * bw, y = bh - (hillH(t) - 2) * u, a = rnd() * TAU;
+    g.beginPath(); g.moveTo(x - 3.4 * u, y); g.lineTo(x - 2.4 * u, y - 13 * u); g.lineTo(x + 2.4 * u, y - 13 * u); g.lineTo(x + 3.4 * u, y); g.fill();
+    g.beginPath(); g.arc(x, y - 13 * u, 2.6 * u, Math.PI, 0); g.fill();
+    for (let k = 0; k < 4; k++) {
+      const b = a + k * Math.PI / 2, cx = x + Math.cos(b) * 6 * u, cy = y - 13 * u + Math.sin(b) * 6 * u;
+      g.save(); g.translate(cx, cy); g.rotate(b); g.fillRect(-5.5 * u, -1.1 * u, 11 * u, 2.2 * u); g.restore();
+    }
+  }
+  { const cx = bw * .82, b = bh - 2 * u;
+    g.beginPath(); g.ellipse(cx, b, 52 * u, 6 * u, 0, Math.PI, 0); g.fill();
+    g.fillRect(cx - 40 * u, b - 16 * u, 80 * u, 16 * u);
+    g.fillRect(cx - 14 * u, b - 38 * u, 13 * u, 38 * u); g.fillRect(cx + 16 * u, b - 28 * u, 10 * u, 28 * u);
+    for (let i = 0; i < 9; i++) g.fillRect(cx - 40 * u + i * 9.4 * u, b - 19 * u, 4.4 * u, 3 * u);
+    for (let i = 0; i < 3; i++) { g.fillRect(cx - 14 * u + i * 4.6 * u, b - 41 * u, 3 * u, 3 * u); g.fillRect(cx + 16 * u + i * 3.6 * u, b - 31 * u, 2.4 * u, 3 * u); }
+    g.fillRect(cx - 8 * u, b - 48 * u, 1.2 * u, 10 * u); g.fillRect(cx - 6.8 * u, b - 48 * u, 5 * u, 3.4 * u); }
+  const wins = thumb ? [] : winsOf(g, bw, bh, rnd, u, 160, 70);
+  // gulet
+  const fe = maskCanvas(72 * u, 40 * u);
+  { const k = fe.g; k.fillStyle = '#fff';
+    k.beginPath(); k.moveTo(2 * u, 29 * u); k.lineTo(72 * u, 26 * u); k.quadraticCurveTo(64 * u, 37 * u, 52 * u, 38 * u); k.lineTo(12 * u, 38 * u); k.quadraticCurveTo(5 * u, 35 * u, 2 * u, 29 * u); k.fill();
+    k.fillRect(16 * u, 25 * u, 30 * u, 4 * u);
+    k.fillRect(26 * u, 3 * u, 1.4 * u, 24 * u); k.fillRect(44 * u, 8 * u, 1.2 * u, 19 * u);
+    k.beginPath(); k.moveTo(27.4 * u, 4 * u); k.lineTo(27.4 * u, 23 * u); k.lineTo(40 * u, 23 * u); k.fill();
+    k.beginPath(); k.moveTo(45.2 * u, 9 * u); k.lineTo(45.2 * u, 23 * u); k.lineTo(56 * u, 23 * u); k.fill();
+    k.beginPath(); k.moveTo(26 * u, 5 * u); k.lineTo(15 * u, 23 * u); k.lineTo(25 * u, 23 * u); k.fill(); }
+  return { far, city, wins, fe };
+}
+const SCENES = { bogaz: sceneBogaz, rize: sceneRize, kapadokya: sceneKapadokya, bodrum: sceneBodrum };
+function buildScene(id, u, bw, bh, thumb) { return (SCENES[id] || sceneBogaz)(u, bw, bh, seeded(7), thumb); }
+function buildBackground() {
+  const u = S * DPR;
+  const bw = Math.ceil(W * DPR * 1.5), bh = Math.ceil(170 * u);
+  const sc = buildScene(VENUES[G.venue].id, u, bw, bh);
   // bulutlar
   const clouds = [];
   for (let i = 0; i < 4; i++) {
@@ -455,7 +604,7 @@ function buildBackground() {
   }
   const stars = []; const r3 = seeded(99);
   for (let i = 0; i < 140; i++) stars.push([r3(), r3() * .75, .4 + r3() * 1.2, r3() * TAU]);
-  BG = { bw, bh, far, city, kk, fe, clouds, wins, stars, ov: mk(Math.ceil(W / 3), Math.ceil(H / 3)), ovKey: '' };
+  BG = { bw, bh, ...sc, clouds, stars, ov: mk(Math.ceil(W / 3), Math.ceil(H / 3)), ovKey: '' };
 }
 // renk grade + vinyet tek bir multiply katmanında (düşük çözünürlük, yumuşak)
 function gradeOverlay(gc) {
@@ -613,11 +762,16 @@ const G = {
   tutorial: store.get('ck_tut', '0') !== '1', tutDone: 0,
   mode: 'classic', mod: null, ph0: 0, revived: false, panel: null, offerRevive: false, runSugar: 0,
   total: parseInt(store.get('ck_total', '0'), 10) || 0, skin: parseInt(store.get('ck_skin', '0'), 10) || 0,
+  venue: parseInt(store.get('ck_venue', '0'), 10) || 0,
 };
 G.shownTotal = G.total;
 const owned = new Set(store.get('ck_owned', '').split(',').filter(Boolean).map(Number));
 function skinOpen(i) { const s = SKINS[i]; return !!s && (i === 0 || owned.has(i) || (s.need > 0 && G.total >= s.need)); }
 if (!(G.skin > 0 && skinOpen(G.skin))) G.skin = 0;
+// mekânlar da aynı kural: bardak sayısıyla açılır ya da şekerle alınır
+const vowned = new Set(store.get('ck_vowned', '').split(',').filter(Boolean).map(Number));
+function venueOpen(i) { const v = VENUES[i]; return !!v && (i === 0 || vowned.has(i) || G.total >= v.need); }
+if (!venueOpen(G.venue)) G.venue = 0;
 // şeker cüzdanı + kalıcı sayaçlar (başarımlar bunlardan okunur)
 const jget = (k, d) => { try { return Object.assign(d, JSON.parse(store.get(k, '{}'))); } catch (e) { return d; } };
 const ST = jget('ck_stats', { gold: 0, bestH: 0, bestCombo: 0, bestScore: 0, dailyBest: 0, loginBest: 0, spins: 0 });
@@ -675,6 +829,8 @@ function setupMode() {
 }
 const parts = [], rings = [], floaters = [];
 let ferry = { x: -1, t: 6 }, gulls = [], gullTimer = 6;
+// kapadokya balonları: ekran oranında konum, yavaşça süzülür
+const balloons = [[.12, .2, .004], [.36, .34, .006], [.62, .14, .0035], [.84, .3, .005]].map(([x, y, v], i) => ({ x, y, v, ph: i * 1.7, k: i }));
 
 function topY() { return G.pieces.length * PH; }
 function topX() { return G.pieces.length ? G.pieces[G.pieces.length - 1].tx : 0; }
@@ -925,12 +1081,21 @@ function askRevive() {
 // oyun sonu: yeni açılan bardak ya da sıradakine kalan
 function overUnlock() {
   const fresh = SKINS.filter((s, i) => s.need > G.shownTotal && s.need <= G.total && !owned.has(i));
+  const freshV = VENUES.filter((v, i) => v.need > G.shownTotal && v.need <= G.total && !vowned.has(i));
   G.shownTotal = G.total;
   const el = $('unlockNote');
-  el.classList.toggle('new', fresh.length > 0);
-  if (fresh.length) { el.textContent = `${tr('Yeni bardak açıldı')}: ${fresh.map((s) => tr(s.name)).join(', ')}`; show('unlockNote', true); return; }
+  el.classList.toggle('new', fresh.length + freshV.length > 0);
+  if (fresh.length || freshV.length) {
+    const msg = [];
+    if (fresh.length) msg.push(`${tr('Yeni bardak açıldı')}: ${fresh.map((s) => tr(s.name)).join(', ')}`);
+    if (freshV.length) msg.push(`${tr('Yeni mekân açıldı')}: ${freshV.map((v) => tr(v.name)).join(', ')}`);
+    el.textContent = msg.join(' · '); show('unlockNote', true); return;
+  }
+  // sıradaki hedef: bardak ya da mekân, hangisi daha yakınsa
   const next = SKINS.find((s, i) => s.need > G.total && !owned.has(i));
-  if (next) { el.textContent = `${tr('Sıradaki bardak')}: ${tr(next.name)} · ${next.need - G.total} ${tr('bardak kaldı')}`; show('unlockNote', true); }
+  const nextV = VENUES.find((v, i) => v.need > G.total && !vowned.has(i));
+  if (nextV && (!next || nextV.need < next.need)) { el.textContent = `${tr('Sıradaki mekân')}: ${tr(nextV.name)} · ${nextV.need - G.total} ${tr('bardak kaldı')}`; show('unlockNote', true); }
+  else if (next) { el.textContent = `${tr('Sıradaki bardak')}: ${tr(next.name)} · ${next.need - G.total} ${tr('bardak kaldı')}`; show('unlockNote', true); }
   else show('unlockNote', false);
 }
 function refreshTitle() {
@@ -939,7 +1104,8 @@ function refreshTitle() {
   if (best) sub += ` · ${tr('Bugün')} ${best}`;
   if (streak) sub += ` · ${tr('Seri')} ${streak}`;
   $('dailySub').textContent = sub;
-  const fresh = SKINS.some((s, i) => i > 0 && skinOpen(i) && store.get('ck_seen' + i, '0') !== '1');
+  const fresh = SKINS.some((s, i) => i > 0 && skinOpen(i) && store.get('ck_seen' + i, '0') !== '1')
+    || VENUES.some((v, i) => i > 0 && venueOpen(i) && store.get('ck_vseen' + i, '0') !== '1');
   $('cupsBtn').classList.toggle('dot', fresh);
   const ls = loginState(), sp = spinState();
   $('giftBtn').classList.toggle('dot', !ls.claimed || sp.free);
@@ -984,8 +1150,14 @@ function setGfx(v) {
 }
 function openCups() { openPanel('cups'); }
 function closeCups() { if (G.panel === 'cups') closePanel(); }
+// koleksiyon iki sekme: bardaklar | mekânlar
 function renderCups(note) {
-  const grid = $('cupGrid'); grid.textContent = '';
+  const venues = G.cupTab === 'venues';
+  document.querySelectorAll('#cupTabs button').forEach((b) => b.setAttribute('aria-pressed', (b.dataset.t === 'venues') === venues ? 'true' : 'false'));
+  $('cupsTitle').textContent = tr(venues ? 'Mekânlar' : 'Bardaklar');
+  $('cupTabs').classList.toggle('dot-v', VENUES.some((v, i) => i > 0 && venueOpen(i) && store.get('ck_vseen' + i, '0') !== '1'));
+  if (venues) { renderVenues(note); return; }
+  const grid = $('cupGrid'); grid.textContent = ''; grid.className = 'cup-grid';
   $('cupTotal').textContent = note || `${tr('Toplam')} ${G.total} ${tr('bardak')}`;
   SKINS.forEach((s, i) => {
     const open = skinOpen(i);
@@ -1004,6 +1176,60 @@ function renderCups(note) {
     grid.append(b);
   });
 }
+const VTHUMB = [];
+const VTHUMB_PH = [1, 4, 3, 5];   // her mekân kendi vaktinde: gün batımı, sabah, şafak, öğle
+function venueThumb(i) {
+  if (VTHUMB[i]) return VTHUMB[i];
+  const d = Math.min(window.devicePixelRatio || 1, 2), tw = 150, th = 88;
+  const c = mk(tw * d, th * d), g = c.getContext('2d'), P = PHASES[VTHUMB_PH[i]], V = VENUES[i];
+  const u = .4 * d, bw = Math.ceil(tw * d * 1.25), bh = Math.ceil(170 * u);
+  const sc = buildScene(V.id, u, bw, bh, true);
+  let gr = g.createLinearGradient(0, 0, 0, c.height);
+  gr.addColorStop(0, rgb(P.skyTop)); gr.addColorStop(.5, rgb(P.skyMid)); gr.addColorStop(.8, rgb(P.skyBot));
+  g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+  const hy = c.height * .7, ox = (c.width - bw) / 2;
+  g.fillStyle = rgb(P.sun); g.beginPath(); g.arc(P.sx * c.width, Math.min(P.sy * c.height * 1.1, hy - 10 * d), P.sr * .45 * d, 0, TAU); g.fill();
+  g.drawImage(tinted(sc.far, vtint(mixc(P.far, P.skyBot, .25), V.far, P.night)), ox - 6 * d, hy - bh + 3 * d);
+  g.drawImage(tinted(sc.city, vtint(P.city, V.city, P.night)), ox, hy - bh + 1 * d);
+  if (sc.rows) { g.globalAlpha = .55; g.drawImage(tinted(sc.rows, vtint(P.city, V.rows, P.night)), ox, hy - bh + 1 * d); g.globalAlpha = 1; }
+  gr = g.createLinearGradient(0, hy, 0, c.height);
+  if (V.water) { const sea = V.sea; gr.addColorStop(0, rgb(sea ? mixc(mixc(P.sea, P.skyBot, .25), sea[0], sea[2]) : mixc(P.sea, P.skyBot, .25))); gr.addColorStop(1, rgb(sea ? mixc(P.seaDeep, sea[1], sea[2]) : P.seaDeep)); }
+  else { gr.addColorStop(0, rgb(mixc(P.far, V.ground[0], V.ground[2]))); gr.addColorStop(1, rgb(mixc(P.city, V.ground[1], V.ground[2]))); }
+  g.fillStyle = gr; g.fillRect(0, hy, c.width, c.height - hy);
+  if (sc.kk) g.drawImage(tinted(sc.kk, mixc(P.city, P.seaDeep, .2)), c.width * .18, hy + 8 * d - sc.kk.c.height);
+  if (sc.balloons) [[.2, .22, 0], [.55, .14, 2], [.8, .3, 1]].forEach(([x, y, k]) => { const b = sc.balloons[k].c; g.drawImage(b, x * c.width - b.width / 2, y * c.height); });
+  c.className = 'vthumb';
+  return (VTHUMB[i] = c);
+}
+function renderVenues(note) {
+  const grid = $('cupGrid'); grid.textContent = ''; grid.className = 'venue-grid';
+  $('cupTotal').textContent = note || `${tr('Toplam')} ${G.total} ${tr('bardak')}`;
+  VENUES.forEach((v, i) => {
+    const open = venueOpen(i);
+    if (open) store.set('ck_vseen' + i, '1');
+    const b = document.createElement('button');
+    b.className = 'venue' + (open ? '' : ' locked') + (!open && Wallet.n >= v.price ? ' buy' : '') + (G.venue === i ? ' on' : '');
+    b.setAttribute('aria-pressed', G.venue === i ? 'true' : 'false');
+    const name = document.createElement('b'); name.textContent = tr(v.name);
+    const sub = document.createElement('span');
+    if (open) sub.textContent = G.venue === i ? tr('Seçili') : tr(v.sub);
+    else { sub.className = 'price'; sub.innerHTML = `<svg><use href="#i-sugar"/></svg>${v.price} <i>· ${v.need} ${tr('bardak')}</i>`; }
+    b.append(venueThumb(i), name, sub);
+    b.addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); if (open) { selectVenue(i); Snd.click(); } else buyVenue(i, b); });
+    grid.append(b);
+  });
+}
+function buyVenue(i, el) {
+  const v = VENUES[i];
+  if (!Wallet.spend(v.price)) {
+    el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); Snd.click(); vibrate(30);
+    $('cupTotal').textContent = `${v.price - Wallet.n} ${tr('şeker daha lazım')} · ${tr('ya da')} ${v.need - G.total} ${tr('bardak')}`;
+    return;
+  }
+  vowned.add(i); store.set('ck_vowned', [...vowned].join(','));
+  Snd.record(); vibrate([20, 30, 20]);
+  selectVenue(i); checkAch();
+}
 function buySkin(i, el) {
   const s = SKINS[i];
   if (!Wallet.spend(s.price)) {
@@ -1020,6 +1246,20 @@ function selectSkin(i) {
   G.skin = i; store.set('ck_skin', i);
   SPR.glass = TEA.map((t) => makeGlass(t, false, G.skin));
   if (G.panel === 'cups') renderCups();
+}
+
+function selectVenue(i) {
+  if (!venueOpen(i)) return;
+  const same = i === G.venue;
+  G.venue = i; store.set('ck_venue', i);
+  if (!same) { buildBackground(); applyVenue(); }
+  if (G.panel === 'cups') renderCups();
+}
+function applyVenue() {
+  const v = VENUES[G.venue];
+  Snd.setScene({ water: v.water, call: v.call });
+  $('venueEyebrow').textContent = tr(v.eyebrow);
+  ferry.x = -1; ferry.t = 3;
 }
 
 // hediye paneli: 7 günlük seri + çark
@@ -1135,6 +1375,7 @@ const ACH = [
   { id: 'l7', name: 'Bir hafta', desc: '7 gün üst üste hediye al', n: 7, r: 60, v: () => ST.loginBest },
   { id: 'k4', name: 'Koleksiyoncu', desc: '4 bardak tasarımı aç', n: 4, r: 50, v: () => SKINS.filter((s, i) => skinOpen(i)).length },
   { id: 'k9', name: 'Tam takım', desc: 'Bütün bardakları aç', n: SKINS.length, r: 300, v: () => SKINS.filter((s, i) => skinOpen(i)).length },
+  { id: 'v4', name: 'Gezgin', desc: 'Bütün mekânları aç', n: VENUES.length, r: 150, v: () => VENUES.filter((v, i) => venueOpen(i)).length },
 ];
 const achDone = new Set(store.get('ck_ach', '').split(',').filter(Boolean));
 // günlük görevler: her gün tarihten seçilen 3 görev, best olanlar tek elde en iyi değere bakar
@@ -1346,6 +1587,7 @@ function update(dt) {
   c.x = lerp(c.x, c.tx, k); c.y = lerp(c.y, c.ty, k); c.z = lerp(c.z, c.tz, 1 - Math.exp(-dt * 2.2));
   G.shake *= Math.exp(-dt * 7); G.flash *= Math.exp(-dt * 5);
   // vapur & martılar
+  for (const b of balloons) { b.x += b.v * dt; b.ph += dt * .6; if (b.x > 1.15) b.x = -.15; }
   ferry.t -= dt;
   if (ferry.t <= 0 && ferry.x < 0) { ferry.x = 0; }
   if (ferry.x >= 0) { ferry.x += dt / 28; if (ferry.x > 1) { ferry.x = -1; ferry.t = rand(14, 26); } }
@@ -1415,50 +1657,98 @@ function drawBackground(P) {
   }
   ctx.globalAlpha = 1;
   // ufuk
+  const V = VENUES[G.venue], nt = P.night;
   const hy = H * .6 + rise * .3;
   if (hy < H + 40) {
     const bw = BG.bw / DPR, bh = BG.bh / DPR, ox = (W - bw) / 2 + hx;
-    ctx.drawImage(tinted(BG.far, mixc(P.far, P.skyBot, .25)), ox - 20, hy - bh + 6, bw, bh);
-    ctx.drawImage(tinted(BG.city, P.city), ox, hy - bh + 2, bw, bh);
-    if (P.night > .05) {
+    ctx.drawImage(tinted(BG.far, vtint(mixc(P.far, P.skyBot, .25), V.far, nt)), ox - 20, hy - bh + 6, bw, bh);
+    const cityC = vtint(P.city, V.city, nt);
+    ctx.drawImage(tinted(BG.city, cityC), ox, hy - bh + 2, bw, bh);
+    if (BG.rows) { ctx.globalAlpha = .55; ctx.drawImage(tinted(BG.rows, vtint(P.city, V.rows, nt)), ox, hy - bh + 2, bw, bh); ctx.globalAlpha = 1; }
+    if (nt > .05) {
       for (const w of BG.wins) {
         const f = .6 + .4 * Math.sin(G.t * .7 + w[2] * 30);
-        ctx.fillStyle = `rgba(255,${200 + w[2] * 40 | 0},120,${P.night * f * (w[2] > .3 ? .95 : .4)})`;
+        ctx.fillStyle = `rgba(255,${200 + w[2] * 40 | 0},120,${nt * f * (w[2] > .3 ? .95 : .4)})`;
         ctx.fillRect(ox + w[0] / DPR, hy - bh + 2 + w[1] / DPR, 1.6 * S, 1.6 * S);
       }
     }
-    // deniz
-    gr = ctx.createLinearGradient(0, hy, 0, hy + H * .4);
-    gr.addColorStop(0, rgb(mixc(P.sea, P.skyBot, .25))); gr.addColorStop(1, rgb(P.seaDeep));
-    ctx.fillStyle = gr; ctx.fillRect(0, hy, W, H - hy + 2);
-    // parıltı
-    const shs = eco() ? 2 : 1;
-    for (let i = 0; i < 46; i += shs) {
-      const yy = hy + 4 + Math.pow(i / 46, 1.6) * H * .32;
-      const spread = 18 + i * 2.2;
-      const xx = sx + Math.sin(i * 12.9 + G.t * (.6 + (i % 5) * .2)) * spread;
-      const a = (.25 + .35 * Math.sin(G.t * 2 + i)) * (1 - i / 46);
-      ctx.fillStyle = rgb(P.shimmer, Math.max(0, a));
-      ctx.fillRect(xx - (6 + i * .5) / 2, yy, 6 + i * .5, 1.2);
+    if (V.water) {
+      // deniz
+      gr = ctx.createLinearGradient(0, hy, 0, hy + H * .4);
+      const sea = V.sea;
+      gr.addColorStop(0, rgb(sea ? vtint(mixc(P.sea, P.skyBot, .25), [sea[0], sea[2]], nt) : mixc(P.sea, P.skyBot, .25)));
+      gr.addColorStop(1, rgb(sea ? vtint(P.seaDeep, [sea[1], sea[2]], nt) : P.seaDeep));
+      ctx.fillStyle = gr; ctx.fillRect(0, hy, W, H - hy + 2);
+      // parıltı
+      const shs = eco() ? 2 : 1;
+      for (let i = 0; i < 46; i += shs) {
+        const yy = hy + 4 + Math.pow(i / 46, 1.6) * H * .32;
+        const spread = 18 + i * 2.2;
+        const xx = sx + Math.sin(i * 12.9 + G.t * (.6 + (i % 5) * .2)) * spread;
+        const a = (.25 + .35 * Math.sin(G.t * 2 + i)) * (1 - i / 46);
+        ctx.fillStyle = rgb(P.shimmer, Math.max(0, a));
+        ctx.fillRect(xx - (6 + i * .5) / 2, yy, 6 + i * .5, 1.2);
+      }
+    } else {
+      // kara: vadi tabanı + perspektifte tarla sıraları
+      const gt = V.ground, top = vtint(P.far, [gt[0], gt[2]], nt), deep = vtint(P.city, [gt[1], gt[2]], nt);
+      gr = ctx.createLinearGradient(0, hy, 0, hy + H * .4);
+      gr.addColorStop(0, rgb(top)); gr.addColorStop(1, rgb(deep));
+      ctx.fillStyle = gr; ctx.fillRect(0, hy, W, H - hy + 2);
+      ctx.fillStyle = rgb(deep, BG.rows ? .4 : .18);
+      for (let i = 0; i < 12; i++) ctx.fillRect(0, hy + 3 + Math.pow(i / 12, 1.7) * H * .34, W, (.8 + i * .22) * S);
     }
     // kız kulesi
-    const kw = BG.kk.c.width / DPR, kh = BG.kk.c.height / DPR;
-    ctx.drawImage(tinted(BG.kk, mixc(P.city, P.seaDeep, .2)), W * .2 - kw / 2 + hx * 1.2, hy + 22 * S - kh, kw, kh);
-    if (P.night > .3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = P.night * .7; ctx.drawImage(SPR.warm, W * .2 - 6 * S + hx * 1.2, hy + 22 * S - kh + 10 * S, 12 * S, 12 * S); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-    // vapur
-    if (ferry.x >= 0) {
+    if (BG.kk) {
+      const kw = BG.kk.c.width / DPR, kh = BG.kk.c.height / DPR;
+      ctx.drawImage(tinted(BG.kk, mixc(P.city, P.seaDeep, .2)), W * .2 - kw / 2 + hx * 1.2, hy + 22 * S - kh, kw, kh);
+      if (nt > .3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = nt * .7; ctx.drawImage(SPR.warm, W * .2 - 6 * S + hx * 1.2, hy + 22 * S - kh + 10 * S, 12 * S, 12 * S); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+    }
+    // vapur / gulet
+    if (BG.fe && ferry.x >= 0) {
       const fw = BG.fe.c.width / DPR, fh = BG.fe.c.height / DPR;
       const fx = lerp(-fw, W + fw, ferry.x) + hx, fy = hy + 40 * S;
-      ctx.drawImage(tinted(BG.fe, mixc(P.city, P.seaDeep, .1)), fx - fw / 2, fy - fh, fw, fh);
+      ctx.drawImage(tinted(BG.fe, V.city ? mixc(cityC, P.seaDeep, .25) : mixc(P.city, P.seaDeep, .1)), fx - fw / 2, fy - fh, fw, fh);
       ctx.fillStyle = rgb(P.shimmer, .25); ctx.fillRect(fx - fw / 2, fy + 1, fw, 1.2);
-      if (P.night > .3) { ctx.fillStyle = `rgba(255,220,140,${P.night})`; for (let i = 0; i < 7; i++) ctx.fillRect(fx - fw / 2 + (12 + i * 7) * S, fy - fh + 10.5 * S, 2.2 * S, 1.6 * S); }
+      if (nt > .3) {
+        ctx.fillStyle = `rgba(255,220,140,${nt})`;
+        if (BG.kk) for (let i = 0; i < 7; i++) ctx.fillRect(fx - fw / 2 + (12 + i * 7) * S, fy - fh + 10.5 * S, 2.2 * S, 1.6 * S);
+        else for (let i = 0; i < 3; i++) ctx.fillRect(fx - fw / 2 + (20 + i * 9) * S, fy - fh + 26 * S, 2 * S, 1.4 * S);
+      }
+    }
+    // rize: tepelerin arasında süzülen sis
+    if (BG.rows) {
+      ctx.globalAlpha = .3 * (1 - nt * .5);
+      const mist = tinted(SPR.mistM, P.cloud);
+      for (let k = 0; k < 2; k++) {
+        const mx = ((G.t * .008 * (k ? 1.4 : 1) + k * .5) % 1.6 - .3) * W;
+        ctx.drawImage(mist, mx - W * .7, hy - (18 + k * 16) * S - 22 * S, W * 1.4, 44 * S);
+      }
+      ctx.globalAlpha = 1;
     }
   }
-  // martılar
-  ctx.strokeStyle = rgb(P.bird, .85); ctx.lineWidth = 1.6 * S; ctx.lineCap = 'round';
-  for (const gg of gulls) {
-    const x = gg.x * W, y = gg.y * H + rise * .2, s = 7 * S * gg.s, f = Math.sin(gg.ph) * .6;
-    ctx.beginPath(); ctx.moveTo(x - s, y - s * f * .8); ctx.quadraticCurveTo(x - s * .5, y - s * (.6 + f * .5), x, y); ctx.quadraticCurveTo(x + s * .5, y - s * (.6 + f * .5), x + s, y - s * f * .8); ctx.stroke();
+  // balonlar (kapadokya): renkli sprite, gece koyulaşır, sepet ateşi parlar
+  if (BG.balloons) {
+    for (const b of balloons) {
+      const sp = BG.balloons[b.k], w = sp.c.width / DPR, h = sp.c.height / DPR;
+      const x = b.x * W + hx * (.4 + b.k * .1), y = b.y * H + rise * .18 + Math.sin(b.ph) * 4 * S;
+      ctx.drawImage(sp.c, x - w / 2, y - h / 2, w, h);
+      if (nt > .05) { ctx.globalAlpha = nt * .7; ctx.drawImage(tinted(sp, P.skyTop), x - w / 2, y - h / 2, w, h); ctx.globalAlpha = 1; }
+      if (nt > .3 && Math.sin(G.t * 1.3 + b.k * 2) > .2) {
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = nt * .8;
+        ctx.drawImage(SPR.warm, x - 7 * S, y + h * .12 - 7 * S, 14 * S, 14 * S);
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      }
+    }
+  }
+  // martılar / kuşlar
+  if (V.call !== 'none') {
+    const bs = V.call === 'bird' ? .6 : 1;
+    ctx.strokeStyle = rgb(P.bird, .85); ctx.lineWidth = 1.6 * S * bs; ctx.lineCap = 'round';
+    for (const gg of gulls) {
+      const x = gg.x * W, y = gg.y * H + rise * .2, s = 7 * S * gg.s * bs, f = Math.sin(gg.ph) * .6;
+      ctx.beginPath(); ctx.moveTo(x - s, y - s * f * .8); ctx.quadraticCurveTo(x - s * .5, y - s * (.6 + f * .5), x, y); ctx.quadraticCurveTo(x + s * .5, y - s * (.6 + f * .5), x + s, y - s * f * .8); ctx.stroke();
+    }
   }
 }
 function worldTransform(shx, shy) {
@@ -1708,6 +1998,7 @@ $('homeBtn').addEventListener('click', (e) => { e.stopPropagation(); goHome(); }
 $('againBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); startGame(); });
 $('reviveBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askRevive(); });
 $('dailyBtn').addEventListener('click', (e) => { e.stopPropagation(); if (G.state === 'title' && !G.panel) startGame('daily'); });
+document.querySelectorAll('#cupTabs button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); if (G.cupTab === b.dataset.t) return; G.cupTab = b.dataset.t; Snd.click(); renderCups(); }));
 $('cupsBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('cups'); });
 $('giftBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('gift'); });
 $('achBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('ach'); });
@@ -1766,6 +2057,7 @@ window.__game = {
   get mode() { return G.mode; }, get total() { return G.total; }, get skin() { return G.skin; },
   get canRevive() { const b = $('reviveBtn'); return G.state === 'over' && !b.classList.contains('hidden'); },
   get daily() { return G.mod ? G.mod.name : null; }, get revived() { return G.revived; },
+  get venue() { return VENUES[G.venue].id; }, selectVenue, setPhase(i) { G.phase = G.phaseFrom = i; G.phaseT = 1; },
   setTotal(n) { G.total = n; store.set('ck_total', n); }, selectSkin, revive: () => askRevive(), openCups, closeCups,
   get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
@@ -1786,6 +2078,7 @@ window.__game = {
 
 // ------------------------------------------------------------------ boot
 resize();
+applyVenue();
 syncMute();
 $('titleBest').querySelector('b').textContent = G.best;
 // eski kayıtlı oyuncular: bu sürümden önceki rekorlar başarımlara sayılsın
