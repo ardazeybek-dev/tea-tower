@@ -80,7 +80,8 @@
     'Hediye serisi': 'Gift streak', 'Günlük çay serisi': 'Daily tea streak', 'gün': 'days', 'Dün kaçtı, şekerle kurtar': 'Missed yesterday, save it with sugar',
     'Seri kurtarıldı': 'Streak saved', 'Seriyi kurtar': 'Save your streak',
     'Bu haftanın hedefleri': "This week's goals", 'gün kaldı': 'days left',
-    'Bu hafta {n} bardak diz': 'Stack {n} glasses this week', 'Bu hafta {n} farklı gün oyna': 'Play on {n} different days this week'
+    'Bu hafta {n} bardak diz': 'Stack {n} glasses this week', 'Bu hafta {n} farklı gün oyna': 'Play on {n} different days this week',
+    'Ana ekrana ekle': 'Add to home screen'
   };
   var lang = 'en';
   try { var l = (navigator.languages && navigator.languages[0]) || navigator.language || ''; if (/^tr\b/i.test(l)) lang = 'tr'; } catch (e) {}

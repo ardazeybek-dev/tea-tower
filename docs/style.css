@@ -288,3 +288,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 /* uzun panellerde kapat butonu hep görünsün */
 .cups-panel #cupsClose,.gift-panel #giftClose{position:sticky;bottom:0;z-index:1}
 .gift-panel #giftClose{background:linear-gradient(180deg,rgba(248,232,210,0),#f6e2c8 40%)}
+/* ana ekrana ekle: dikkat çeksin ama bağırmasın */
+.share-btn.inst-o{right:auto;left:8px;background:rgba(224,168,58,.22)}
+.icon-btn.install{background:rgba(255,215,140,.28);border-color:rgba(255,226,168,.6);animation:pop .45s cubic-bezier(.2,1.6,.4,1) both}
+@media (min-aspect-ratio:3/5){#title .tag{display:none}}

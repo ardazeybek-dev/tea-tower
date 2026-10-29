@@ -1147,6 +1147,7 @@ function startGame(mode) {
   ui.score(0, false); ui.combo('');
   if (G.mod) floater(0, 230, `${tr('Günlük çay')} · ${tr(G.mod.name)}`, '#ffe2a8', 22, true);
   misEvent('runs', 1); if (G.mode === 'daily') misEvent('daily', 1);
+  store.set('ck_runs', (parseInt(store.get('ck_runs', '0'), 10) || 0) + 1);
   show('title', false); show('over', false); show('pause', false); show('hud', true);
   show('tutorial', G.tutorial);
 }
@@ -1325,6 +1326,7 @@ function endGame() {
   $('titleBest').querySelector('b').textContent = G.best;
   refreshTitle();
   show('hud', false); show('tutorial', false); show('over', true);
+  syncInstall();
   if (rec && G.score > 0) { setTimeout(() => { Snd.record(); confetti(60); }, 280); }
 }
 // ikinci şans sunulurken "Bir el daha" ikincil, ekrana dokunma kapalı
@@ -2301,10 +2303,25 @@ function goHome() {
   show('pause', false); show('over', false); show('hud', false); show('tutorial', false);
   G.state = 'title'; G.phaseFrom = G.phase; demoTower(); G.phaseFrom = 0; G.phaseT = 1;
   $('titleBest').querySelector('b').textContent = G.best;
-  refreshTitle(); flushToasts();
+  refreshTitle(); flushToasts(); syncInstall();
   show('title', true);
 }
 function syncMute() { document.body.classList.toggle('muted', Snd.muted); }
+// ana ekrana ekle: tarayıcı izin verince, oyuncu 2 el oynadıktan sonra başlıkta küçük bir buton
+let installEv = null;
+function installReady() {
+  const later = store.get('ck_inst', '');
+  return !!installEv && !window.PF && (parseInt(store.get('ck_runs', '0'), 10) || 0) >= 2 && later !== 'done' && (!later || later < daysAgo(3));
+}
+function syncInstall() { const on = installReady(); show('installBtn', on); show('installBtnO', on); }
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEv = e; syncInstall(); });
+window.addEventListener('appinstalled', () => { store.set('ck_inst', 'done'); installEv = null; syncInstall(); });
+function askInstall() {
+  if (!installEv) return;
+  const ev = installEv; installEv = null; syncInstall();
+  ev.prompt();
+  if (ev.userChoice) ev.userChoice.then((c) => store.set('ck_inst', c && c.outcome === 'accepted' ? 'done' : dayKey()), () => {});
+}
 
 window.addEventListener('pointerdown', (e) => {
   const btn = e.target.closest && e.target.closest('button');
@@ -2334,6 +2351,7 @@ for (const id of ['cupsClose', 'giftClose', 'achClose', 'setClose']) $(id).addEv
 $('claimBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); claimGift(); });
 $('spinBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askSpin(); });
 $('shareBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
+for (const id of ['installBtn', 'installBtnO']) $(id).addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); askInstall(); });
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (G.state === 'paused') resume(); else { Snd.init(); tap(); } }
@@ -2351,6 +2369,8 @@ document.addEventListener('gesturestart', (e) => e.preventDefault());
 let last = performance.now(), frames = 0, fpsT = 0, fps = 60, workSum = 0, workN = 0, slowT = 0;
 function frame(now) {
   requestAnimationFrame(frame);
+  const idle = G.state === 'paused' ? 95 : G.state === 'title' && !wheelAnim ? 31 : 0;
+  if (idle && now - last < idle) return;
   let dt = (now - last) / 1000; last = now;
   if (!(dt > 0)) dt = 0;
   const realDt = Math.min(dt, 1);
@@ -2361,7 +2381,8 @@ function frame(now) {
   const work = performance.now() - w0;
   workSum += work; workN++;
   frames++; fpsT += realDt;
-  if (fpsT >= 1) {
+  if (idle) { frames = 0; fpsT = 0; slowT = 0; }
+  else if (fpsT >= 1) {
     fps = frames / fpsT; frames = 0; fpsT = 0;
     // uyarlanabilir çözünürlük
     if (fps < 42 && DPR > 1.5 && !window.__fixDpr) { slowT++; if (slowT >= 3) { dprCap = 1.5; slowT = 0; resize(); } } else slowT = 0;
@@ -2376,7 +2397,7 @@ window.__game = {
   get canTap() { return G.state === 'playing' && !!G.hang && !G.hang.released && G.hang.it >= .55; },
   get offset() { return G.hang ? hangPos(G.hang).x - topX() : null; },
   get fps() { return fps; },
-  perf() { const r = { fps, avgWorkMs: workN ? workSum / workN : 0, dpr: DPR }; workSum = 0; workN = 0; return r; },
+  perf() { const r = { fps, avgWorkMs: workN ? workSum / workN : 0, dpr: DPR, frames: workN }; workSum = 0; workN = 0; return r; },
   get mode() { return G.mode; }, get total() { return G.total; }, get skin() { return G.skin; },
   get canRevive() { const b = $('reviveBtn'); return G.state === 'over' && !b.classList.contains('hidden'); },
   get daily() { return G.mod ? G.mod.name : null; }, get revived() { return G.revived; },
