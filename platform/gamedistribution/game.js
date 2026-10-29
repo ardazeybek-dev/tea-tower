@@ -40,12 +40,12 @@ const HC = 78;           // askıdaki setin kule tepesine boşluğu
 const TEA = [hex('#7c190b'), hex('#a3301a'), hex('#b8461f'), hex('#c45c26')];
 
 const PHASES = [
-  { name: T('İkindi'), skyTop: '#ea9a70', skyMid: '#f6c386', skyBot: '#fde2ae', sun: '#fff4d6', glow: '#ffcf86', far: '#d89c7c', city: '#7c4b46', sea: '#c97c5c', seaDeep: '#8c4a44', shimmer: '#ffe4ab', cloud: '#fff0dc', bird: '#5a3030', grade: [255, 214, 172, .16], stars: 0, night: 0, sx: .74, sy: .40, sr: 26 },
-  { name: T('Gün batımı'), skyTop: '#46377a', skyMid: '#c0587c', skyBot: '#f89a5c', sun: '#ffd8a6', glow: '#ff8c6a', far: '#9c5c7c', city: '#3c2444', sea: '#7e4466', seaDeep: '#3e2448', shimmer: '#ffb488', cloud: '#f6b2a2', bird: '#2a1a2e', grade: [242, 172, 196, .22], stars: .25, night: .5, sx: .7, sy: .535, sr: 36 },
-  { name: T('Gece'), skyTop: '#0a1430', skyMid: '#182a56', skyBot: '#33497c', sun: '#f4f1e6', glow: '#a9c0ff', far: '#1e2d55', city: '#0b1226', sea: '#14213f', seaDeep: '#0a1228', shimmer: '#d4dcff', cloud: '#3c4c7a', bird: '#c8d0ee', grade: [128, 148, 214, .42], stars: 1, night: 1, sx: .26, sy: .2, sr: 19 },
-  { name: T('Şafak'), skyTop: '#2c3a6e', skyMid: '#8e6c9c', skyBot: '#f6b2a0', sun: '#ffe8d2', glow: '#ffaea0', far: '#7c6e96', city: '#3a3456', sea: '#6c6492', seaDeep: '#3a3660', shimmer: '#ffd2c2', cloud: '#f4c8c6', bird: '#2a2440', grade: [222, 192, 222, .24], stars: .35, night: .55, sx: .24, sy: .52, sr: 30 },
-  { name: T('Sabah'), skyTop: '#7db4dc', skyMid: '#b8d7e8', skyBot: '#f6e2cc', sun: '#fffaf0', glow: '#fff0d2', far: '#a8bdcc', city: '#6c8396', sea: '#6c9cb4', seaDeep: '#3e6e8a', shimmer: '#ffffff', cloud: '#ffffff', bird: '#3a4a5a', grade: [255, 244, 234, .08], stars: 0, night: 0, sx: .3, sy: .33, sr: 24 },
-  { name: T('Öğle'), skyTop: '#4e96ce', skyMid: '#8cc0e2', skyBot: '#dcefee', sun: '#ffffff', glow: '#fffae6', far: '#93b2c4', city: '#55707f', sea: '#3c86a6', seaDeep: '#24607e', shimmer: '#ffffff', cloud: '#ffffff', bird: '#33424e', grade: [255, 250, 240, .05], stars: 0, night: 0, sx: .62, sy: .15, sr: 22 },
+  { name: T('İkindi'), skyTop: '#a3b3cc', skyMid: '#e2c6aa', skyBot: '#f6ddb8', sun: '#fff6e0', glow: '#ffd7a0', far: '#bba595', city: '#6e5656', sea: '#a99c98', seaDeep: '#55606e', shimmer: '#fff0cc', cloud: '#fff3e4', bird: '#4a3838', grade: [255, 220, 184, .12], stars: 0, night: 0, sx: .74, sy: .40, sr: 26 },
+  { name: T('Gün batımı'), skyTop: '#5f6aa6', skyMid: '#b48fbf', skyBot: '#f6b9a2', sun: '#fff0d2', glow: '#ffb898', far: '#b58aa2', city: '#5a4262', sea: '#8c7096', seaDeep: '#3f3a66', shimmer: '#ffd6b8', cloud: '#f6c8bc', bird: '#2e2236', grade: [240, 192, 204, .18], stars: .25, night: .5, sx: .7, sy: .535, sr: 36 },
+  { name: T('Gece'), skyTop: '#0c1429', skyMid: '#1d2b4e', skyBot: '#3a4a72', sun: '#f4f1e6', glow: '#a9b8e0', far: '#26314f', city: '#0e1425', sea: '#18233d', seaDeep: '#0b1223', shimmer: '#d4dcff', cloud: '#3e4a6c', bird: '#c8d0ee', grade: [128, 148, 204, .4], stars: 1, night: 1, sx: .26, sy: .2, sr: 19 },
+  { name: T('Şafak'), skyTop: '#3e4c7a', skyMid: '#9d8baa', skyBot: '#f2c6b2', sun: '#ffe8d2', glow: '#ffc2aa', far: '#8f88a2', city: '#433c58', sea: '#7c7a9a', seaDeep: '#3c3c62', shimmer: '#ffd8c8', cloud: '#f2d2ca', bird: '#2a2440', grade: [222, 196, 222, .2], stars: .35, night: .55, sx: .24, sy: .52, sr: 30 },
+  { name: T('Sabah'), skyTop: '#86afd2', skyMid: '#bdd3e2', skyBot: '#efe6d8', sun: '#fffaf0', glow: '#fff0d2', far: '#aebcc7', city: '#6e8292', sea: '#7da2b5', seaDeep: '#3f6a84', shimmer: '#ffffff', cloud: '#ffffff', bird: '#3a4a5a', grade: [255, 244, 234, .07], stars: 0, night: 0, sx: .3, sy: .33, sr: 24 },
+  { name: T('Öğle'), skyTop: '#6399c6', skyMid: '#9fc3dd', skyBot: '#e3ecea', sun: '#ffffff', glow: '#fffae6', far: '#a4b7c3', city: '#5d7482', sea: '#4f8ba6', seaDeep: '#2b6280', shimmer: '#ffffff', cloud: '#ffffff', bird: '#33424e', grade: [255, 250, 240, .05], stars: 0, night: 0, sx: .62, sy: .15, sr: 22 },
 ].map((p) => {
   const o = { ...p };
   for (const k of ['skyTop', 'skyMid', 'skyBot', 'sun', 'glow', 'far', 'city', 'sea', 'seaDeep', 'shimmer', 'cloud', 'bird']) o[k] = hex(p[k]);
@@ -379,12 +379,12 @@ function buildSprites() {
 const VENUES = [
   { id: 'bogaz', name: 'Boğaz', sub: 'Üsküdar kıyısı', eyebrow: "Boğaz'a karşı", need: 0, water: true, call: 'gull' },
   { id: 'rize', name: 'Rize', sub: 'Çay bahçesi', eyebrow: 'Çay bahçesinde', need: 120, price: 300, water: false, call: 'bird',
-    far: ['#4c6e66', .45], city: ['#3a7a3a', .62], ground: ['#6aa04a', '#2a5a2e', .7], rows: ['#1f4a24', .6] },
+    far: ['#4c6e66', .45], city: ['#3a7a3a', .62], ground: ['#4c7a3c', '#22482a', .72] },
   { id: 'kapadokya', name: 'Kapadokya', sub: 'Peri bacaları', eyebrow: 'Peri bacalarına karşı', need: 260, price: 550, water: false, call: 'none',
     far: ['#b4806a', .42], city: ['#d8a67c', .55], ground: ['#cc965f', '#7c4c32', .68] },
   { id: 'bodrum', name: 'Bodrum', sub: 'Ege koyu', eyebrow: "Ege'ye karşı", need: 450, price: 850, water: true, call: 'gull',
     far: ['#6e8a62', .42], city: ['#f6f1e8', .72], sea: ['#2c8cb4', '#0c5a84', .45] },
-].map((v) => { for (const k of ['far', 'city', 'ground', 'rows', 'sea']) if (v[k]) v[k] = v[k].map((c) => typeof c === 'string' ? hex(c) : c); return v; });
+].map((v) => { for (const k of ['far', 'city', 'ground', 'sea']) if (v[k]) v[k] = v[k].map((c) => typeof c === 'string' ? hex(c) : c); return v; });
 const vtint = (base, t, night) => t ? mixc(base, t[0], t[1] * (1 - night * .75)) : base;
 
 function maskCanvas(w, h) { const c = mk(w, h); return { c, g: c.getContext('2d') }; }
@@ -424,31 +424,69 @@ function ridgeMask(bw, bh, u, fn, step) {
   g.lineTo(bw, bh); g.fill();
   return m;
 }
+// katman maskesi: alfa = şekil, rgb = önceden işlenmiş gölge/doku (beyaz = tam renk). Renk birleştirmede çarpılır.
+const grey = (v) => { v = v * 255 | 0; return `rgb(${v},${v},${v})`; };
+function atop(m, fn) { const g = m.g; g.save(); g.globalCompositeOperation = 'source-atop'; fn(g); g.restore(); }
+// tabana doğru koyulaşma: yamaç dibi gölgede kalır
+function baseShade(m, bh, u, top, k) {
+  atop(m, (g) => { const gr = g.createLinearGradient(0, bh - top * u, 0, bh); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, `rgba(0,0,0,${k})`); g.fillStyle = gr; g.fillRect(0, 0, m.c.width, bh); });
+}
+// yatay kaya katmanları (tüf, plato)
+function strata(m, bw, bh, u, rnd, top, a) {
+  atop(m, (g) => { for (let y = bh - top * u; y < bh;) { const h = (1 + rnd() * 3.5) * u; g.fillStyle = `rgba(0,0,0,${(rnd() * a).toFixed(3)})`; g.fillRect(0, y, bw, h); y += h; } });
+}
+// çay sıraları: tepe konturuna paralel, aşağı indikçe aralık açılır
+function teaRows(m, bw, bh, u, fn, n, gap, a, lw) {
+  atop(m, (k) => {
+    k.strokeStyle = `rgba(0,0,0,${a})`; k.lineWidth = lw * u;
+    for (let j = 1; j <= n; j++) {
+      k.beginPath();
+      for (let x = 0; x <= bw; x += 8) { const t = x / bw, y = bh - fn(t) * u + j * (gap + j * gap * .2) * u + Math.sin(t * 60 + j) * .6 * u; x ? k.lineTo(x, y) : k.moveTo(x, y); }
+      k.stroke();
+    }
+  });
+}
+// dağınık koyu benekler: maki, çalı, ağaç
+function speckle(m, bw, bh, u, rnd, n, top, r, a) {
+  atop(m, (g) => { g.fillStyle = `rgba(0,0,0,${a})`; for (let i = 0; i < n; i++) { const x = rnd() * bw, y = bh - rnd() * top * u, rr = (r * (.5 + rnd())) * u; g.beginPath(); g.ellipse(x, y, rr, rr * .8, 0, 0, TAU); g.fill(); } });
+}
+// boğaz geçidi: köprünün altında tepeler alçalır, su görünsün
+const strait = (t) => 1 - .82 * Math.exp(-Math.pow((t - .72) / .05, 2));
 function sceneBogaz(u, bw, bh, rnd, thumb) {
-  // uzak tepeler
-  const far = maskCanvas(bw, bh);
-  far.g.fillStyle = '#fff';
-  far.g.beginPath(); far.g.moveTo(0, bh);
-  for (let x = 0; x <= bw; x += 6) {
-    const t = x / bw;
-    const y = bh - (34 + 16 * Math.sin(t * 7.3 + 1) + 10 * Math.sin(t * 17.1) + 6 * Math.sin(t * 41)) * u;
-    far.g.lineTo(x, y);
-  }
-  far.g.lineTo(bw, bh); far.g.fill();
-  for (let x = 0; x < bw; x += 5 * u) { if (rnd() < .5) { const hh = (3 + rnd() * 7) * u, t = x / bw; const y0 = bh - (34 + 16 * Math.sin(t * 7.3 + 1) + 10 * Math.sin(t * 17.1) + 6 * Math.sin(t * 41)) * u; far.g.fillRect(x, y0 - hh + 2 * u, 4 * u, hh); } }
-  // yakın siluet
+  // en uzak: Anadolu sırtı, pusun içinde
+  const haze = ridgeMask(bw, bh, u, (t) => (48 + 12 * Math.sin(t * 2.6 + 2) + 6 * Math.sin(t * 7.9 + .3)) * strait(t), 8);
+  // uzak tepeler, seyrek evler ve köprü
+  const hill = (t) => (34 + 16 * Math.sin(t * 7.3 + 1) + 10 * Math.sin(t * 17.1) + 6 * Math.sin(t * 41)) * strait(t);
+  const far = ridgeMask(bw, bh, u, hill, 6), fg = far.g;
+  for (let x = 0; x < bw; x += 5 * u) { if (rnd() < .5) { const hh = (3 + rnd() * 7) * u; fg.fillStyle = grey(.8 + rnd() * .2); fg.fillRect(x, bh - hill(x / bw) * u - hh + 2 * u, 4 * u, hh); } }
+  fg.fillStyle = '#fff'; fg.strokeStyle = '#fff';
+  { const x0 = bw * .665, x1 = bw * .775, dk = bh - 26 * u, tt = dk - 36 * u;
+    fg.fillRect(x0 - 44 * u, dk, x1 - x0 + 88 * u, 2.2 * u);
+    for (const x of [x0, x1]) { fg.fillRect(x - 1.4 * u, tt, 2.8 * u, bh - tt); fg.fillRect(x - 1.8 * u, dk + 6 * u, 3.6 * u, 1.4 * u); }
+    fg.lineWidth = .8 * u; fg.beginPath();
+    fg.moveTo(x0 - 44 * u, dk); fg.quadraticCurveTo(x0 - 12 * u, dk - 8 * u, x0, tt);
+    fg.quadraticCurveTo((x0 + x1) / 2, dk + 30 * u, x1, tt);
+    fg.quadraticCurveTo(x1 + 12 * u, dk - 8 * u, x1 + 44 * u, dk); fg.stroke();
+    fg.globalAlpha = .45; fg.lineWidth = .5 * u; fg.beginPath();
+    for (let x = x0 + 4 * u; x < x1 - 2 * u; x += 4 * u) { const f = (x - x0) / (x1 - x0), cy = tt * (1 - f) * (1 - f) + 2 * f * (1 - f) * (dk + 30 * u) + f * f * tt; fg.moveTo(x, cy); fg.lineTo(x, dk); }
+    fg.stroke(); fg.globalAlpha = 1; }
+  baseShade(far, bh, u, 40, .22);
+  // yakın siluet: tarihi yarımada, her bina kendi tonunda
   const city = maskCanvas(bw, bh);
-  const g = city.g; g.fillStyle = '#fff';
+  const g = city.g;
   let x = 0;
-  while (x < bw) { const w = (7 + rnd() * 16) * u, h = (5 + rnd() * 14) * u; g.fillRect(x, bh - h, w + 1, h); if (rnd() < .3) { g.beginPath(); g.moveTo(x, bh - h); g.lineTo(x + w / 2, bh - h - 5 * u); g.lineTo(x + w, bh - h); g.fill(); } x += w; }
+  while (x < bw) { const w = (7 + rnd() * 16) * u, h = (5 + rnd() * 14) * u; g.fillStyle = grey(.72 + rnd() * .28); g.fillRect(x, bh - h, w + 1, h); if (rnd() < .3) { g.beginPath(); g.moveTo(x, bh - h); g.lineTo(x + w / 2, bh - h - 5 * u); g.lineTo(x + w, bh - h); g.fill(); } x += w; }
+  g.fillStyle = '#fff';
   g.fillRect(0, bh - 6 * u, bw, 6 * u);
   drawMosque(g, bw * .18, bh - 4 * u, u, .78, [[-62, 70, 2], [62, 70, 2]]);
   drawMosque(g, bw * .43, bh - 8 * u, u, 1.0, [[-66, 88, 3], [66, 88, 3], [-84, 70, 2], [84, 70, 2]]);
   // galata
   { const gx = bw * .62, gb = bh - 10 * u; g.fillRect(gx - 7 * u, gb - 58 * u, 14 * u, 58 * u); g.fillRect(gx - 8.4 * u, gb - 50 * u, 16.8 * u, 3 * u);
-    g.beginPath(); g.moveTo(gx - 8 * u, gb - 58 * u); g.lineTo(gx, gb - 78 * u); g.lineTo(gx + 8 * u, gb - 58 * u); g.fill(); g.fillRect(gx - .7 * u, gb - 84 * u, 1.4 * u, 7 * u); }
+    g.beginPath(); g.moveTo(gx - 8 * u, gb - 58 * u); g.lineTo(gx, gb - 78 * u); g.lineTo(gx + 8 * u, gb - 58 * u); g.fill(); g.fillRect(gx - .7 * u, gb - 84 * u, 1.4 * u, 7 * u);
+    atop(city, (k) => { k.fillStyle = 'rgba(0,0,0,.35)'; for (let i = 0; i < 4; i++) k.fillRect(gx - 5 * u + i * 3 * u, gb - 46 * u, 1.4 * u, 3 * u); }); }
   drawMosque(g, bw * .8, bh - 5 * u, u, .7, [[-60, 72, 2], [60, 72, 2], [-74, 60, 1], [74, 60, 1]]);
   drawMosque(g, bw * .97, bh - 3 * u, u, .5, [[-58, 70, 2]]);
+  baseShade(city, bh, u, 30, .32);
   const wins = thumb ? [] : winsOf(g, bw, bh, rnd, u, 170, 40);
   // kız kulesi
   const kk = maskCanvas(60 * u, 54 * u);
@@ -462,69 +500,101 @@ function sceneBogaz(u, bw, bh, rnd, thumb) {
   { const k = fe.g; k.fillStyle = '#fff';
     k.beginPath(); k.moveTo(0, 15 * u); k.lineTo(70 * u, 15 * u); k.lineTo(64 * u, 23 * u); k.lineTo(6 * u, 23 * u); k.fill();
     k.fillRect(8 * u, 9 * u, 54 * u, 6 * u); k.fillRect(14 * u, 4 * u, 40 * u, 5 * u); k.fillRect(31 * u, 0, 6 * u, 5 * u); }
-  return { far, city, wins, kk, fe };
+  const layers = [
+    { m: haze, d: 1, col: 'far', top: 64, dy: 6 },
+    { m: far, d: .55, col: 'far', top: 62, sh: 4, dy: 4 },
+    { m: city, d: 0, col: 'city', top: 100, sh: 6, dy: 0 },
+  ];
+  return { layers, wins, kk, fe };
 }
 function sceneRize(u, bw, bh, rnd, thumb) {
-  // kaçkarlar: sivri, yüksek sırtlar
-  const far = ridgeMask(bw, bh, u, (t) => 62 + 26 * Math.sin(t * 5.3 + 2) + 16 * Math.abs(Math.sin(t * 13.7 + .4)) + 6 * Math.sin(t * 37));
-  // çay tepeleri + ahşap evler, ağaç kümeleri, küçük cami
+  // kaçkarlar: sivri, yüksek sırtlar, en uzakta
+  const peaks = ridgeMask(bw, bh, u, (t) => 62 + 26 * Math.sin(t * 5.3 + 2) + 16 * Math.abs(Math.sin(t * 13.7 + .4)) + 6 * Math.sin(t * 37));
+  // ara sırt: karşı yamacın çaylıkları
+  const midH = (t) => 44 + 12 * Math.sin(t * 3.1 + 2.2) + 6 * Math.sin(t * 7.7 + .8);
+  const mid = ridgeMask(bw, bh, u, midH, 6);
+  teaRows(mid, bw, bh, u, midH, 12, 1.8, .2, .8);
+  speckle(mid, bw, bh, u, rnd, 120, 40, 1.6, .28);
+  baseShade(mid, bh, u, 40, .2);
+  // yakın çay tepeleri + ahşap evler, ağaç kümeleri, küçük cami
   const hill = (t) => 34 + 16 * Math.sin(t * 4.2 + .5) + 8 * Math.sin(t * 9.3 + 1.2);
   const city = ridgeMask(bw, bh, u, hill), g = city.g;
+  atop(city, (k) => { k.fillStyle = grey(.86); k.fillRect(0, 0, bw, bh); });
+  teaRows(city, bw, bh, u, hill, 10, 3, .34, 1.3);
   for (let x = 20 * u; x < bw; x += (26 + rnd() * 60) * u) {
     const y = bh - hill(x / bw) * u + 2 * u;
     if (rnd() < .55) {
       const w = (8 + rnd() * 6) * u, h = (6 + rnd() * 4) * u;
-      g.fillRect(x - w / 2, y - h, w, h);
-      g.beginPath(); g.moveTo(x - w / 2 - 1.5 * u, y - h); g.lineTo(x, y - h - 5 * u); g.lineTo(x + w / 2 + 1.5 * u, y - h); g.fill();
-    } else for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(x + (k - 1) * 4 * u, y - (4 + rnd() * 4) * u, (3 + rnd() * 2.5) * u, 0, TAU); g.fill(); }
+      g.fillStyle = '#fff'; g.fillRect(x - w / 2, y - h, w, h);
+      g.fillStyle = grey(.78); g.fillRect(x + w * .18, y - h, w * .32, h);
+      g.fillStyle = grey(.48); g.beginPath(); g.moveTo(x - w / 2 - 1.5 * u, y - h); g.lineTo(x, y - h - 5 * u); g.lineTo(x + w / 2 + 1.5 * u, y - h); g.fill();
+    } else { g.fillStyle = grey(.5); for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(x + (k - 1) * 4 * u, y - (4 + rnd() * 4) * u, (3 + rnd() * 2.5) * u, 0, TAU); g.fill(); } }
   }
+  g.fillStyle = '#fff';
   drawMosque(g, bw * .72, bh - hill(.72) * u + 3 * u, u, .42, [[-56, 76, 2]]);
-  // çay sıraları: tepe konturuna paralel ince çizgiler, tepenin içine kırpılır
-  const rows = maskCanvas(bw, bh);
-  { const k = rows.g; k.strokeStyle = '#fff'; k.lineWidth = 1.3 * u;
-    for (let j = 1; j < 10; j++) {
-      k.beginPath();
-      for (let x = 0; x <= bw; x += 8) { const t = x / bw, y = bh - hill(t) * u + j * (3 + j * .6) * u + Math.sin(t * 60 + j) * .6 * u; x ? k.lineTo(x, y) : k.moveTo(x, y); }
-      k.stroke();
-    }
-    k.globalCompositeOperation = 'destination-in'; k.drawImage(city.c, 0, 0); k.globalCompositeOperation = 'source-over'; }
+  baseShade(city, bh, u, 50, .3);
   const wins = thumb ? [] : winsOf(g, bw, bh, rnd, u, 60, 34);
-  return { far, city, rows, wins };
+  const layers = [
+    { m: peaks, d: 1, col: 'far', top: 110, dy: 6 },
+    { m: mid, d: .5, col: 'mid', top: 64, sh: 4, dy: 3 },
+    { m: city, d: 0, col: 'city', top: 60, sh: 5, dy: 0 },
+  ];
+  return { layers, wins, mist: true };
 }
 function sceneKapadokya(u, bw, bh, rnd, thumb) {
-  // düz tepeli platolar
+  // en uzak: erciyes, karlı zirve
+  const ercH = (t) => 24 + 5 * Math.sin(t * 5.1 + 1) + 3 * Math.sin(t * 31) + 86 * Math.exp(-Math.abs(t - .7) / .075) * (1 - .08 * Math.exp(-Math.pow((t - .7) / .01, 2)));
+  const erc = ridgeMask(bw, bh, u, ercH, 4);
+  atop(erc, (k) => {
+    k.fillStyle = 'rgba(0,0,0,.24)'; k.beginPath(); k.moveTo(0, bh);
+    for (let x = 0; x <= bw; x += 3 * u) k.lineTo(x, bh - (Math.min(ercH(x / bw) - 2, 78 + rnd() * 6 + Math.sin(x * .05 / u) * 6 + 8 * Math.abs(Math.sin(x * .013 / u)))) * u);
+    k.lineTo(bw, bh); k.fill();
+  });
+  // düz tepeli platolar, katman katman
   const K = 8, hs = []; for (let i = 0; i <= K; i++) hs.push(30 + rnd() * 34);
   const far = ridgeMask(bw, bh, u, (t, x) => {
     const f = t * K, i = Math.min(K - 1, f | 0), e = clamp((f - i - .8) / .2, 0, 1);
     return lerp(hs[i], hs[i + 1], e * e * (3 - 2 * e)) + Math.sin(x * .05 / u) * 1.2;
   }, 4);
+  strata(far, bw, bh, u, rnd, 70, .16);
+  baseShade(far, bh, u, 50, .22);
   // peri bacaları + uçhisar kalesi
   const city = ridgeMask(bw, bh, u, (t) => 9 + 5 * Math.sin(t * 9 + 1), 6), g = city.g;
-  const base = bh - 8 * u;
+  const base = bh - 8 * u, caps = [];
   const chim = (x, h, w) => {
     g.beginPath(); g.moveTo(x - w, base);
     g.bezierCurveTo(x - w * .55, base - h * .35, x - w * .32, base - h * .8, x - w * .18, base - h);
     g.lineTo(x + w * .18, base - h);
     g.bezierCurveTo(x + w * .32, base - h * .8, x + w * .55, base - h * .35, x + w, base); g.fill();
-    g.beginPath(); g.ellipse(x, base - h - 1.2 * u, w * .44, 3 * u, 0, 0, TAU); g.fill();
-    g.beginPath(); g.ellipse(x, base - h - 3.4 * u, w * .26, 2.8 * u, 0, Math.PI, 0); g.fill();
+    caps.push([x, base - h, w]);
   };
   for (let x = 6 * u; x < bw; x += (10 + rnd() * 22) * u) {
     if (Math.abs(x / bw - .34) < .06) continue;
     const n = 1 + (rnd() * 3 | 0);
     for (let k = 0; k < n; k++) chim(x + k * 5 * u, (16 + rnd() * 34) * u, (5 + rnd() * 5) * u);
   }
-  { const cx = bw * .34, b = base + 2 * u;
-    g.beginPath(); g.moveTo(cx - 46 * u, b);
-    g.bezierCurveTo(cx - 40 * u, b - 30 * u, cx - 26 * u, b - 44 * u, cx - 14 * u, b - 50 * u);
-    g.lineTo(cx - 12 * u, b - 70 * u); g.bezierCurveTo(cx - 6 * u, b - 79 * u, cx + 6 * u, b - 79 * u, cx + 12 * u, b - 70 * u);
-    g.lineTo(cx + 16 * u, b - 50 * u); g.bezierCurveTo(cx + 28 * u, b - 42 * u, cx + 40 * u, b - 28 * u, cx + 48 * u, b); g.fill();
-    g.fillRect(cx - .8 * u, b - 88 * u, 1.6 * u, 12 * u); g.fillRect(cx + .8 * u, b - 88 * u, 6 * u, 4 * u); }
+  const cx = bw * .34, b = base + 2 * u;
+  g.beginPath(); g.moveTo(cx - 46 * u, b);
+  g.bezierCurveTo(cx - 40 * u, b - 30 * u, cx - 26 * u, b - 44 * u, cx - 14 * u, b - 50 * u);
+  g.lineTo(cx - 12 * u, b - 70 * u); g.bezierCurveTo(cx - 6 * u, b - 79 * u, cx + 6 * u, b - 79 * u, cx + 12 * u, b - 70 * u);
+  g.lineTo(cx + 16 * u, b - 50 * u); g.bezierCurveTo(cx + 28 * u, b - 42 * u, cx + 40 * u, b - 28 * u, cx + 48 * u, b); g.fill();
+  g.fillRect(cx - .8 * u, b - 88 * u, 1.6 * u, 12 * u); g.fillRect(cx + .8 * u, b - 88 * u, 6 * u, 4 * u);
+  strata(city, bw, bh, u, rnd, 90, .13);
+  // bazalt şapkalar koyu, kalenin yüzünde oyma pencereler
+  g.fillStyle = grey(.58);
+  for (const [x, y, w] of caps) { g.beginPath(); g.ellipse(x, y - 1.2 * u, w * .44, 3 * u, 0, 0, TAU); g.fill(); g.beginPath(); g.ellipse(x, y - 3.4 * u, w * .26, 2.8 * u, 0, Math.PI, 0); g.fill(); }
+  atop(city, (k) => { k.fillStyle = 'rgba(0,0,0,.5)'; for (let i = 0; i < 46; i++) { const hx = cx + (rnd() - .5) * 60 * u, hy = b - (6 + rnd() * 62) * u; k.fillRect(hx, hy, 1.6 * u, 2.2 * u); } });
+  baseShade(city, bh, u, 40, .3);
   const wins = thumb ? [] : winsOf(g, bw, bh, rnd, u, 110, 70);
-  // balonlar: renkli, önbelleğe alınmış küçük sprite'lar
-  const pal = [['#d8402e', '#f2c14e', '#2f6fb0'], ['#f08a3c', '#fff1d6'], ['#3a9a6a', '#f2d25e', '#d8402e'], ['#7a4aa8', '#f4b8c8']];
+  // balonlar: toprak tonlu, önbelleğe alınmış küçük sprite'lar
+  const pal = [['#b8503c', '#dcb25c', '#3e6a94'], ['#cf8448', '#ece0c8'], ['#4c8064', '#d8bc6a', '#b04c3a'], ['#6e5690', '#dcb0b6']];
   const balloons = pal.map((p, i) => makeBalloon(u * (i % 2 ? 1.05 : 1.35), p));
-  return { far, city, wins, balloons };
+  const layers = [
+    { m: erc, d: 1, col: 'far', top: 124, dy: 6 },
+    { m: far, d: .5, col: 'far', top: 66, sh: 4, dy: 4 },
+    { m: city, d: 0, col: 'city', top: 90, sh: 7, dy: 0 },
+  ];
+  return { layers, wins, balloons };
 }
 function makeBalloon(u, cols) {
   const r = 9 * u, c = mk(r * 2 + 2, r * 3.2), g = c.getContext('2d');
@@ -535,7 +605,7 @@ function makeBalloon(u, cols) {
   g.quadraticCurveTo(-r * .55, r * 1.2, Math.cos(Math.PI * .82) * r, Math.sin(Math.PI * .82) * r); g.closePath(); g.clip();
   for (let i = 0; i < 6; i++) { g.fillStyle = cols[i % cols.length]; g.fillRect(-r + i * r / 3, -r, r / 3 + 1, r * 2.6); }
   const sh = g.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r * 1.6);
-  sh.addColorStop(0, 'rgba(255,255,255,.35)'); sh.addColorStop(.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(40,10,10,.45)');
+  sh.addColorStop(0, 'rgba(255,255,255,.3)'); sh.addColorStop(.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(40,10,10,.5)');
   g.fillStyle = sh; g.fillRect(-r, -r, r * 2, r * 2.6);
   g.restore();
   g.strokeStyle = 'rgba(60,30,20,.7)'; g.lineWidth = Math.max(.6, .1 * r);
@@ -544,34 +614,52 @@ function makeBalloon(u, cols) {
   return { c, r };
 }
 function sceneBodrum(u, bw, bh, rnd, thumb) {
-  // adalar + evlerin yaslandığı yamaç
+  // en uzak: karşı adalar
+  const isl = ridgeMask(bw, bh, u, (t) => 30 + 12 * Math.sin(t * 3.3 + 1.4) + 5 * Math.sin(t * 11.2), 6);
+  // evlerin yaslandığı yamaç, makiyle benekli
   const hillH = (t) => 74 * Math.exp(-Math.pow((t - .46) / .2, 2));
   const far = ridgeMask(bw, bh, u, (t) => Math.max(20 + 9 * Math.sin(t * 6.1 + .4) + 5 * Math.sin(t * 17.3), hillH(t) + 3 * Math.sin(t * 23)));
-  // beyaz kübik evler, sırtta yel değirmenleri, kıyıda kale
-  const city = maskCanvas(bw, bh), g = city.g; g.fillStyle = '#fff';
-  g.fillRect(0, bh - 3 * u, bw, 3 * u);
-  for (let i = 0; i < 190; i++) {
+  speckle(far, bw, bh, u, rnd, 420, 80, 1.5, .22);
+  baseShade(far, bh, u, 60, .2);
+  // beyaz kübik evler (gölgeli yan yüz), servi, sırtta yel değirmenleri, kıyıda kale
+  const city = maskCanvas(bw, bh), g = city.g;
+  g.fillStyle = '#fff'; g.fillRect(0, bh - 3 * u, bw, 3 * u);
+  // evler yamaca teraslar hâlinde dizilir, alttakiler önde
+  const houses = [];
+  for (let i = 0; i < 340; i++) {
     const t = .24 + rnd() * .46, top = hillH(t);
     if (top < 12) continue;
-    const yy = top * (.04 + rnd() * .8), w = (4 + rnd() * 6) * u, h = (3 + rnd() * 4) * u;
-    g.fillRect(t * bw - w / 2, bh - yy * u - h, w, h);
+    houses.push([t, Math.round(top * (.04 + rnd() * .8) / 4.5) * 4.5 + rnd() * 1.2, (3 + rnd() * 4) * u, (2.6 + rnd() * 2.4) * u]);
   }
+  houses.sort((a, b) => b[1] - a[1]);
+  for (const [t, yy, w, h] of houses) {
+    const x0 = t * bw - w / 2, y0 = bh - yy * u - h;
+    g.fillStyle = '#fff'; g.fillRect(x0, y0, w, h);
+    g.fillStyle = grey(.86); g.fillRect(x0 + w * .64, y0, w * .36, h);
+  }
+  g.fillStyle = grey(.42);
+  for (let i = 0; i < 34; i++) { const t = .26 + rnd() * .42, top = hillH(t); if (top < 14) continue; const x = t * bw, y = bh - top * (.05 + rnd() * .75) * u, hh = (5 + rnd() * 4) * u; g.beginPath(); g.ellipse(x, y - hh / 2, .9 * u, hh / 2, 0, 0, TAU); g.fill(); }
+  // yel değirmenleri: taş gövde, konik külah, altı ince kollu kanat (bazıları yıkık, kanatsız)
   for (const t of [.38, .43, .5, .55]) {
-    const x = t * bw, y = bh - (hillH(t) - 2) * u, a = rnd() * TAU;
-    g.beginPath(); g.moveTo(x - 3.4 * u, y); g.lineTo(x - 2.4 * u, y - 13 * u); g.lineTo(x + 2.4 * u, y - 13 * u); g.lineTo(x + 3.4 * u, y); g.fill();
-    g.beginPath(); g.arc(x, y - 13 * u, 2.6 * u, Math.PI, 0); g.fill();
-    for (let k = 0; k < 4; k++) {
-      const b = a + k * Math.PI / 2, cx = x + Math.cos(b) * 6 * u, cy = y - 13 * u + Math.sin(b) * 6 * u;
-      g.save(); g.translate(cx, cy); g.rotate(b); g.fillRect(-5.5 * u, -1.1 * u, 11 * u, 2.2 * u); g.restore();
-    }
+    const x = t * bw, y = bh - (hillH(t) - 2) * u, a = rnd() * TAU, hy = y - 10 * u;
+    g.fillStyle = grey(.92);
+    g.beginPath(); g.moveTo(x - 3.6 * u, y); g.lineTo(x - 2.9 * u, hy); g.lineTo(x + 2.9 * u, hy); g.lineTo(x + 3.6 * u, y); g.fill();
+    g.fillStyle = grey(.6); g.beginPath(); g.moveTo(x - 3.2 * u, hy); g.lineTo(x, hy - 3.6 * u); g.lineTo(x + 3.2 * u, hy); g.fill();
+    if (t === .43) continue;
+    g.strokeStyle = grey(.7); g.lineWidth = .6 * u; g.beginPath();
+    for (let k = 0; k < 6; k++) { const b = a + k * Math.PI / 3; g.moveTo(x, hy - 1.4 * u); g.lineTo(x + Math.cos(b) * 7 * u, hy - 1.4 * u + Math.sin(b) * 7 * u); }
+    g.stroke();
   }
+  g.fillStyle = grey(.88);
   { const cx = bw * .82, b = bh - 2 * u;
     g.beginPath(); g.ellipse(cx, b, 52 * u, 6 * u, 0, Math.PI, 0); g.fill();
     g.fillRect(cx - 40 * u, b - 16 * u, 80 * u, 16 * u);
     g.fillRect(cx - 14 * u, b - 38 * u, 13 * u, 38 * u); g.fillRect(cx + 16 * u, b - 28 * u, 10 * u, 28 * u);
     for (let i = 0; i < 9; i++) g.fillRect(cx - 40 * u + i * 9.4 * u, b - 19 * u, 4.4 * u, 3 * u);
     for (let i = 0; i < 3; i++) { g.fillRect(cx - 14 * u + i * 4.6 * u, b - 41 * u, 3 * u, 3 * u); g.fillRect(cx + 16 * u + i * 3.6 * u, b - 31 * u, 2.4 * u, 3 * u); }
-    g.fillRect(cx - 8 * u, b - 48 * u, 1.2 * u, 10 * u); g.fillRect(cx - 6.8 * u, b - 48 * u, 5 * u, 3.4 * u); }
+    g.fillRect(cx - 8 * u, b - 48 * u, 1.2 * u, 10 * u); g.fillRect(cx - 6.8 * u, b - 48 * u, 5 * u, 3.4 * u);
+    atop(city, (k) => { k.fillStyle = 'rgba(0,0,0,.18)'; for (let y = b - 38 * u; y < b; y += 2.6 * u) k.fillRect(cx - 52 * u, y, 104 * u, .5 * u); }); }
+  baseShade(city, bh, u, 30, .25);
   const wins = thumb ? [] : winsOf(g, bw, bh, rnd, u, 160, 70);
   // gulet
   const fe = maskCanvas(72 * u, 40 * u);
@@ -582,21 +670,27 @@ function sceneBodrum(u, bw, bh, rnd, thumb) {
     k.beginPath(); k.moveTo(27.4 * u, 4 * u); k.lineTo(27.4 * u, 23 * u); k.lineTo(40 * u, 23 * u); k.fill();
     k.beginPath(); k.moveTo(45.2 * u, 9 * u); k.lineTo(45.2 * u, 23 * u); k.lineTo(56 * u, 23 * u); k.fill();
     k.beginPath(); k.moveTo(26 * u, 5 * u); k.lineTo(15 * u, 23 * u); k.lineTo(25 * u, 23 * u); k.fill(); }
-  return { far, city, wins, fe };
+  const layers = [
+    { m: isl, d: 1, col: 'far', top: 50, dy: 5 },
+    { m: far, d: .5, col: 'far', top: 80, sh: 4, dy: 3 },
+    { m: city, d: 0, col: 'city', top: 80, sh: 2, rim: .5, dy: 0 },
+  ];
+  return { layers, wins, fe };
 }
 const SCENES = { bogaz: sceneBogaz, rize: sceneRize, kapadokya: sceneKapadokya, bodrum: sceneBodrum };
 function buildScene(id, u, bw, bh, thumb) { return (SCENES[id] || sceneBogaz)(u, bw, bh, seeded(7), thumb); }
 // eski arka plan canvas'larını hemen boşalt: iOS canvas belleğini geç bırakır, art arda mekân değişimi sınırı aşmasın
 function freeMask(m) { if (!m) return; for (const c of [m.c, m._t]) if (c) c.width = c.height = 0; m._key = null; }
+function freeScene(sc) {
+  for (const L of sc.layers) freeMask(L.m);
+  for (const k of ['kk', 'fe', 'comp', 'T', 'E']) freeMask(sc[k]);
+  if (sc.balloons) sc.balloons.forEach(freeMask);
+}
 let CLOUDS = null;
 function buildBackground() {
   const u = S * DPR;
   const bw = Math.ceil(W * DPR * 1.5), bh = Math.ceil(170 * u);
-  if (BG) {
-    for (const k of ['far', 'city', 'rows', 'kk', 'fe']) freeMask(BG[k]);
-    if (BG.balloons) BG.balloons.forEach(freeMask);
-    BG.ov.width = BG.ov.height = 0;
-  }
+  if (BG) { freeScene(BG); BG.ov.width = BG.ov.height = 0; }
   const sc = buildScene(VENUES[G.venue].id, u, bw, bh);
   // bulutlar: mekândan bağımsız, yalnızca çözünürlük değişince yeniden çizilir
   if (!CLOUDS || CLOUDS.u !== u) {
@@ -617,7 +711,120 @@ function buildBackground() {
     for (let i = 0; i < 140; i++) stars.push([r3(), r3() * .75, .4 + r3() * 1.2, r3() * TAU]);
     CLOUDS = { u, list: clouds, stars };
   }
-  BG = { bw, bh, ...sc, clouds: CLOUDS.list, stars: CLOUDS.stars, ov: mk(Math.ceil(W / 3), Math.ceil(H / 3)), ovKey: '' };
+  // ufuk tek tuvalde birleşir: kara katmanları + deniz/kara zemini (ekranın alt %42'si)
+  BG = { bw, bh, ...sc, clouds: CLOUDS.list, stars: CLOUDS.stars, ov: mk(Math.ceil(W / 3), Math.ceil(H / 3)), ovKey: '',
+    comp: maskCanvas(bw, bh + Math.ceil(H * .42 * DPR)), T: maskCanvas(bw, bh), E: maskCanvas(bw, bh), compKey: '' };
+}
+// ------------------------------------------------------------------ ufuk birleştirme
+// Vaktin renkleriyle: katman rengi × gölge, güneşe bakan kenar aydınlık, karşı yan gölgede, uzak katman pusa gömülür.
+// Sonra ufuk pusu, güneş saçılması, su (yansıma + dalga bantları) ya da vadi tabanı. Yalnızca renkler değişince çizilir.
+const hazeOf = (P) => mixc(P.skyBot, P.glow, .3);
+function layerColor(L, P, V, nt) {
+  const far = vtint(mixc(P.far, P.skyBot, .25), V.far, nt), city = vtint(P.city, V.city, nt);
+  return L.col === 'far' ? far : L.col === 'mid' ? mixc(far, city, .55) : city;
+}
+function composeHorizon(o, layers, bh, P, V, u, T, E, vw, lite) {
+  const g = o.g, bw = o.c.width, H2 = o.c.height, sh = H2 - bh, nt = P.night, hz = hazeOf(P);
+  const side = P.sx > .5 ? 1 : -1, lightC = rgb(mixc(P.glow, P.sun, .5)), litA = .55 * (1 - nt * .6);
+  const t = T.g, e = E.g;
+  g.clearRect(0, 0, bw, H2);
+  for (const L of layers) {
+    const C = layerColor(L, P, V, nt), m = L.m.c;
+    t.globalCompositeOperation = 'copy'; t.drawImage(m, 0, 0);
+    t.globalCompositeOperation = 'multiply'; t.fillStyle = rgb(C); t.fillRect(0, 0, bw, bh);
+    t.globalCompositeOperation = 'destination-in'; t.drawImage(m, 0, 0);
+    t.globalCompositeOperation = 'source-atop';
+    if (L.d < .9) {
+      // kenar ışığı: güneş yönündeki komşusu boş olan pikseller
+      const r = 1.3 * u;
+      e.globalCompositeOperation = 'copy'; e.drawImage(m, 0, 0);
+      e.globalCompositeOperation = 'destination-out'; e.drawImage(m, -side * r, r);
+      e.globalCompositeOperation = 'source-in'; e.fillStyle = lightC; e.fillRect(0, 0, bw, bh);
+      t.globalAlpha = litA * (1 - L.d * .6) * (L.rim || 1); t.drawImage(E.c, 0, 0);
+      // gölge yanı: güneşin karşısındaki kenarda yumuşak bant
+      if (L.sh && !lite) {
+        e.globalCompositeOperation = 'copy'; e.globalAlpha = 1; e.drawImage(m, 0, 0);
+        e.globalCompositeOperation = 'destination-out'; e.globalAlpha = .5;
+        for (let k = 1; k <= 3; k++) e.drawImage(m, side * L.sh * u * k / 3, 0);
+        e.globalAlpha = 1; e.globalCompositeOperation = 'source-in'; e.fillStyle = rgb(mixc(mixc(C, [0, 0, 0], .5), P.skyTop, .3)); e.fillRect(0, 0, bw, bh);
+        t.globalAlpha = .5 * (1 - L.d * .7); t.drawImage(E.c, 0, 0);
+      }
+      t.globalAlpha = 1;
+    }
+    // hava perspektifi: uzak katman göğe yaklaşır, etekleri pusa gömülür
+    const hg = t.createLinearGradient(0, bh - L.top * u, 0, bh);
+    hg.addColorStop(0, rgb(hz, L.d * .6)); hg.addColorStop(1, rgb(hz, Math.min(.9, L.d * .6 + .14)));
+    t.fillStyle = hg; t.fillRect(0, 0, bw, bh);
+    t.globalCompositeOperation = 'source-over';
+    g.drawImage(T.c, 0, (L.dy || 0) * u);
+  }
+  // ufuk pusu (gökyüzüne de taşar) ve güneş tarafında ışık saçılması
+  let gr = g.createLinearGradient(0, bh - 46 * u, 0, bh);
+  gr.addColorStop(0, rgb(hz, 0)); gr.addColorStop(1, rgb(hz, .24 * (1 - nt * .4)));
+  g.fillStyle = gr; g.fillRect(0, bh - 46 * u, bw, 46 * u);
+  const sxc = (bw - vw) / 2 + P.sx * vw, sr = 130 * u;
+  gr = g.createRadialGradient(sxc, bh, 0, sxc, bh, sr);
+  gr.addColorStop(0, rgb(P.glow, .16 * (1 - nt * .7))); gr.addColorStop(1, rgb(P.glow, 0));
+  g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(sxc - sr, bh - sr, sr * 2, sr * 2); g.globalCompositeOperation = 'source-over';
+  const rnd = seeded(5);
+  let low;
+  if (V.water) {
+    const sea = V.sea;
+    const top = sea ? vtint(mixc(P.sea, P.skyBot, .35), [sea[0], sea[2]], nt) : mixc(P.sea, P.skyBot, .35);
+    low = sea ? vtint(P.seaDeep, [sea[1], sea[2]], nt) : P.seaDeep;
+    gr = g.createLinearGradient(0, bh, 0, H2); gr.addColorStop(0, rgb(top)); gr.addColorStop(1, rgb(low));
+    g.fillStyle = gr; g.fillRect(0, bh, bw, sh);
+    // yansıma: karanın ters, basık, dalgayla kırılmış şeritleri
+    t.globalCompositeOperation = 'copy'; t.drawImage(o.c, 0, 0, bw, bh, 0, 0, bw, bh); t.globalCompositeOperation = 'source-over';
+    const sq = .5, hs = Math.max(2, (lite ? 4 : 2.2) * u), n = Math.ceil(70 * u * sq / hs);
+    for (let i = 0; i < n; i++) {
+      const y0 = bh + i * hs, f = i / n;
+      g.setTransform(1, 0, 0, -1, 0, 2 * y0 + hs);
+      g.globalAlpha = .4 * (1 - f);
+      g.drawImage(T.c, 0, bh - (i + 1) * hs / sq, bw, hs / sq, Math.sin(i * 2.3) * (.4 + f * 2.4) * u, y0, bw, hs);
+    }
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
+    // dalga bantları: ufka yakın sık ve ince, yakında seyrek ve kalın; açık (gök yansıması) ve koyu sırayla
+    const lc = mixc(P.skyBot, P.shimmer, .3), dc = mixc(low, [0, 0, 0], .25);
+    for (let k = 0; k < 46; k++) {
+      const f = k / 46, y = bh + 1 + Math.pow(f, 1.9) * sh, th = (.4 + f * 1.8) * u * .7;
+      g.fillStyle = rgb(k % 2 ? lc : dc, (k % 2 ? .1 : .08) * (1 - f * .3));
+      for (let x = -rnd() * 30 * u; x < bw;) { const len = (10 + rnd() * 60) * u * (.4 + f); g.fillRect(x, y + (rnd() - .5) * th * 2, len, th); x += len + (14 + rnd() * 70) * u * (.4 + f); }
+    }
+  } else {
+    // vadi tabanı: perspektifte tarla/çaylık sıraları, ufka yakın pus
+    const gt = V.ground, top = vtint(P.far, [gt[0], gt[2]], nt);
+    low = vtint(P.city, [gt[1], gt[2]], nt);
+    gr = g.createLinearGradient(0, bh, 0, H2); gr.addColorStop(0, rgb(top)); gr.addColorStop(1, rgb(low));
+    g.fillStyle = gr; g.fillRect(0, bh, bw, sh);
+    const dc = mixc(low, [0, 0, 0], .22), dense = V.id === 'rize';
+    if (dense) {
+      g.strokeStyle = rgb(dc, .34);
+      for (let k = 0; k < 22; k++) {
+        const f = k / 22, y = bh + 2 * u + Math.pow(f, 1.6) * sh * .95, amp = (1 + f * 10) * u, fr = .004 / u * (1 + k % 3 * .3);
+        g.lineWidth = (.5 + f * 2.2) * u * .7; g.beginPath();
+        for (let x = 0; x <= bw; x += 10) { const yy = y + Math.sin(x * fr + k * 1.7) * amp; x ? g.lineTo(x, yy) : g.moveTo(x, yy); }
+        g.stroke();
+      }
+    } else {
+      for (let k = 0; k < 18; k++) {
+        const f = k / 18, y = bh + 2 * u + Math.pow(f, 1.7) * sh * .9, th = (.4 + f * 1.6) * u * .6;
+        g.fillStyle = rgb(dc, .1 * (1 - f * .3));
+        for (let x = -rnd() * 30 * u; x < bw;) { const len = (10 + rnd() * 50) * u * (.4 + f); g.fillRect(x, y, len, th); x += len + (10 + rnd() * 60) * u * (.4 + f); }
+      }
+    }
+    gr = g.createLinearGradient(0, bh, 0, bh + sh * .35);
+    gr.addColorStop(0, rgb(hz, .34 * (1 - nt * .4))); gr.addColorStop(1, rgb(hz, 0));
+    g.fillStyle = gr; g.fillRect(0, bh, bw, sh * .35);
+  }
+  o.low = low;
+}
+// geçişte anahtar 12 adıma yuvarlanır: 2,2 sn'lik geçişte en fazla 12 kez birleştirilir
+function horizon(P, V) {
+  const q = G.phaseT >= 1 ? 1 : Math.round(easeInOut(G.phaseT) * 12) / 12;
+  const key = G.phaseFrom + '|' + G.phase + '|' + q + '|' + eco();
+  if (BG.compKey !== key) { BG.compKey = key; composeHorizon(BG.comp, BG.layers, BG.bh, P, V, S * DPR, BG.T, BG.E, W * DPR, eco()); }
+  return BG.comp;
 }
 // renk grade + vinyet tek bir multiply katmanında (düşük çözünürlük, yumuşak)
 function gradeOverlay(gc) {
@@ -1204,17 +1411,14 @@ function venueThumb(i) {
   let gr = g.createLinearGradient(0, 0, 0, c.height);
   gr.addColorStop(0, rgb(P.skyTop)); gr.addColorStop(.5, rgb(P.skyMid)); gr.addColorStop(.8, rgb(P.skyBot));
   g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
-  const hy = c.height * .7, ox = (c.width - bw) / 2;
+  const hy = c.height * .7;
   g.fillStyle = rgb(P.sun); g.beginPath(); g.arc(P.sx * c.width, Math.min(P.sy * c.height * 1.1, hy - 10 * d), P.sr * .45 * d, 0, TAU); g.fill();
-  g.drawImage(tinted(sc.far, vtint(mixc(P.far, P.skyBot, .25), V.far, P.night)), ox - 6 * d, hy - bh + 3 * d);
-  g.drawImage(tinted(sc.city, vtint(P.city, V.city, P.night)), ox, hy - bh + 1 * d);
-  if (sc.rows) { g.globalAlpha = .55; g.drawImage(tinted(sc.rows, vtint(P.city, V.rows, P.night)), ox, hy - bh + 1 * d); g.globalAlpha = 1; }
-  gr = g.createLinearGradient(0, hy, 0, c.height);
-  if (V.water) { const sea = V.sea; gr.addColorStop(0, rgb(sea ? mixc(mixc(P.sea, P.skyBot, .25), sea[0], sea[2]) : mixc(P.sea, P.skyBot, .25))); gr.addColorStop(1, rgb(sea ? mixc(P.seaDeep, sea[1], sea[2]) : P.seaDeep)); }
-  else { gr.addColorStop(0, rgb(mixc(P.far, V.ground[0], V.ground[2]))); gr.addColorStop(1, rgb(mixc(P.city, V.ground[1], V.ground[2]))); }
-  g.fillStyle = gr; g.fillRect(0, hy, c.width, c.height - hy);
-  if (sc.kk) g.drawImage(tinted(sc.kk, mixc(P.city, P.seaDeep, .2)), c.width * .18, hy + 8 * d - sc.kk.c.height);
+  sc.comp = maskCanvas(bw, bh + Math.ceil(c.height - hy) + 2); sc.T = maskCanvas(bw, bh); sc.E = maskCanvas(bw, bh);
+  composeHorizon(sc.comp, sc.layers, bh, P, V, u, sc.T, sc.E, c.width, true);
+  g.drawImage(sc.comp.c, (c.width - bw) / 2, hy - bh + d);
+  if (sc.kk) g.drawImage(tinted(sc.kk, mixc(mixc(P.city, P.seaDeep, .2), hazeOf(P), .18)), c.width * .18, hy + 8 * d - sc.kk.c.height);
   if (sc.balloons) [[.2, .22, 0], [.55, .14, 2], [.8, .3, 1]].forEach(([x, y, k]) => { const b = sc.balloons[k].c; g.drawImage(b, x * c.width - b.width / 2, y * c.height); });
+  freeScene(sc);
   c.className = 'vthumb';
   return (VTHUMB[i] = c);
 }
@@ -1604,13 +1808,22 @@ function update(dt) {
   c.x = lerp(c.x, c.tx, k); c.y = lerp(c.y, c.ty, k); c.z = lerp(c.z, c.tz, 1 - Math.exp(-dt * 2.2));
   G.shake *= Math.exp(-dt * 7); G.flash *= Math.exp(-dt * 5);
   // vapur & martılar
-  for (const b of balloons) { b.x += b.v * dt; b.ph += dt * .6; if (b.x > 1.15) b.x = -.15; }
+  for (const b of balloons) { b.x += b.v * dt; b.ph += dt * .3; if (b.x > 1.15) b.x = -.15; }
   ferry.t -= dt;
   if (ferry.t <= 0 && ferry.x < 0) { ferry.x = 0; }
   if (ferry.x >= 0) { ferry.x += dt / 28; if (ferry.x > 1) { ferry.x = -1; ferry.t = rand(14, 26); } }
   gullTimer -= dt;
-  if (gullTimer <= 0) { gullTimer = rand(7, 16); const dir = Math.random() < .5 ? 1 : -1; for (let i = 0; i < (Math.random() * 3 | 0) + 1; i++) gulls.push({ x: dir > 0 ? -.1 - i * .05 : 1.1 + i * .05, y: rand(.12, .38) + i * .02, dir, s: rand(.8, 1.2), ph: rand(0, TAU), v: rand(.05, .08) }); if (G.state !== 'paused') Snd.gull(); }
-  for (let i = gulls.length - 1; i >= 0; i--) { const gg = gulls[i]; gg.x += gg.dir * gg.v * dt; gg.ph += dt * 9; if (gg.x < -.2 || gg.x > 1.2) gulls.splice(i, 1); }
+  if (gullTimer <= 0) {
+    gullTimer = rand(7, 16); const dir = Math.random() < .5 ? 1 : -1;
+    const flock = VENUES[G.venue].call === 'bird', n = flock ? 5 + (Math.random() * 4 | 0) : (Math.random() * 3 | 0) + 1;
+    const y0 = rand(.12, .36), v = rand(.04, .065), s = rand(.75, 1.1);
+    for (let i = 0; i < n; i++) {
+      const k = flock ? Math.ceil(i / 2) * (i % 2 ? 1 : -1) : i, back = flock ? Math.abs(k) * .028 : i * .05;
+      gulls.push({ x: dir > 0 ? -.1 - back : 1.1 + back, y: y0 + (flock ? k * .014 : i * .02), dir, s: flock ? s : rand(.75, 1.15), ph: rand(0, TAU), v: flock ? v : rand(.045, .07), fs: flock ? 7 : 4.5 });
+    }
+    if (G.state !== 'paused') Snd.gull();
+  }
+  for (let i = gulls.length - 1; i >= 0; i--) { const gg = gulls[i]; gg.x += gg.dir * gg.v * dt; gg.ph += dt * gg.fs; if (gg.dir > 0 ? gg.x > 1.25 : gg.x < -.25) gulls.splice(i, 1); }
 }
 
 // ------------------------------------------------------------------ render
@@ -1673,60 +1886,52 @@ function drawBackground(P) {
     ctx.drawImage(tinted(m, P.cloud), cxp - cw / 2, sy2 - ch / 2, cw, ch);
   }
   ctx.globalAlpha = 1;
-  // ufuk
+  // ufuk: önceden birleştirilmiş tek tuval (kara katmanları + su/vadi)
   const V = VENUES[G.venue], nt = P.night;
   const hy = H * .6 + rise * .3;
   if (hy < H + 40) {
-    const bw = BG.bw / DPR, bh = BG.bh / DPR, ox = (W - bw) / 2 + hx;
-    ctx.drawImage(tinted(BG.far, vtint(mixc(P.far, P.skyBot, .25), V.far, nt)), ox - 20, hy - bh + 6, bw, bh);
-    const cityC = vtint(P.city, V.city, nt);
-    ctx.drawImage(tinted(BG.city, cityC), ox, hy - bh + 2, bw, bh);
-    if (BG.rows) { ctx.globalAlpha = .55; ctx.drawImage(tinted(BG.rows, vtint(P.city, V.rows, nt)), ox, hy - bh + 2, bw, bh); ctx.globalAlpha = 1; }
+    const bw = BG.bw / DPR, bh = BG.bh / DPR, ox = (W - bw) / 2 + hx, ty = hy - bh + 2;
+    const comp = horizon(P, V), ch = comp.c.height / DPR;
+    ctx.drawImage(comp.c, ox, ty, bw, ch);
+    if (ty + ch < H) { ctx.fillStyle = rgb(comp.low); ctx.fillRect(0, ty + ch - 1, W, H - ty - ch + 1); }
     if (nt > .05) {
       for (const w of BG.wins) {
         const f = .6 + .4 * Math.sin(G.t * .7 + w[2] * 30);
         ctx.fillStyle = `rgba(255,${200 + w[2] * 40 | 0},120,${nt * f * (w[2] > .3 ? .95 : .4)})`;
-        ctx.fillRect(ox + w[0] / DPR, hy - bh + 2 + w[1] / DPR, 1.6 * S, 1.6 * S);
+        ctx.fillRect(ox + w[0] / DPR, ty + w[1] / DPR, 1.6 * S, 1.6 * S);
       }
     }
+    const hz = hazeOf(P);
     if (V.water) {
-      // deniz
-      gr = ctx.createLinearGradient(0, hy, 0, hy + H * .4);
-      const sea = V.sea;
-      gr.addColorStop(0, rgb(sea ? vtint(mixc(P.sea, P.skyBot, .25), [sea[0], sea[2]], nt) : mixc(P.sea, P.skyBot, .25)));
-      gr.addColorStop(1, rgb(sea ? vtint(P.seaDeep, [sea[1], sea[2]], nt) : P.seaDeep));
-      ctx.fillStyle = gr; ctx.fillRect(0, hy, W, H - hy + 2);
-      // parıltı
+      // güneş/ay yolu: ufka yakın ince ve sık, yakında geniş; yavaş kıpırdar
       const shs = eco() ? 2 : 1;
       for (let i = 0; i < 46; i += shs) {
-        const yy = hy + 4 + Math.pow(i / 46, 1.6) * H * .32;
-        const spread = 18 + i * 2.2;
-        const xx = sx + Math.sin(i * 12.9 + G.t * (.6 + (i % 5) * .2)) * spread;
-        const a = (.25 + .35 * Math.sin(G.t * 2 + i)) * (1 - i / 46);
+        const yy = hy + 3 + Math.pow(i / 46, 1.7) * H * .32;
+        const spread = 10 + i * 1.9;
+        const xx = sx + Math.sin(i * 12.9 + G.t * (.35 + (i % 5) * .12)) * spread;
+        const a = (.3 + .4 * Math.sin(G.t * 1.1 + i * 1.7)) * (1 - i / 46) * (1 - P.night * .25);
         ctx.fillStyle = rgb(P.shimmer, Math.max(0, a));
-        ctx.fillRect(xx - (6 + i * .5) / 2, yy, 6 + i * .5, 1.2);
+        ctx.fillRect(xx - (4 + i * .7) / 2, yy, 4 + i * .7, .8 + i * .025);
       }
-    } else {
-      // kara: vadi tabanı + perspektifte tarla sıraları
-      const gt = V.ground, top = vtint(P.far, [gt[0], gt[2]], nt), deep = vtint(P.city, [gt[1], gt[2]], nt);
-      gr = ctx.createLinearGradient(0, hy, 0, hy + H * .4);
-      gr.addColorStop(0, rgb(top)); gr.addColorStop(1, rgb(deep));
-      ctx.fillStyle = gr; ctx.fillRect(0, hy, W, H - hy + 2);
-      ctx.fillStyle = rgb(deep, BG.rows ? .4 : .18);
-      for (let i = 0; i < 12; i++) ctx.fillRect(0, hy + 3 + Math.pow(i / 12, 1.7) * H * .34, W, (.8 + i * .22) * S);
     }
-    // kız kulesi
+    // kız kulesi ve suya yansıması
     if (BG.kk) {
-      const kw = BG.kk.c.width / DPR, kh = BG.kk.c.height / DPR;
-      ctx.drawImage(tinted(BG.kk, mixc(P.city, P.seaDeep, .2)), W * .2 - kw / 2 + hx * 1.2, hy + 22 * S - kh, kw, kh);
-      if (nt > .3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = nt * .7; ctx.drawImage(SPR.warm, W * .2 - 6 * S + hx * 1.2, hy + 22 * S - kh + 10 * S, 12 * S, 12 * S); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
+      const kw = BG.kk.c.width / DPR, kh = BG.kk.c.height / DPR, kx = W * .2 - kw / 2 + hx * 1.2, kt = hy + 22 * S - kh, yb = hy + 22 * S - 4 * S;
+      const kc = tinted(BG.kk, mixc(mixc(P.city, P.seaDeep, .2), hz, .18));
+      ctx.drawImage(kc, kx, kt, kw, kh);
+      ctx.globalAlpha = .26; ctx.setTransform(DPR, 0, 0, -DPR * .45, 0, DPR * yb * 1.45); ctx.drawImage(kc, 0, 0, kc.width, kc.height * 50 / 54, kx, kt, kw, kh - 4 * S);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = 1;
+      if (nt > .3) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = nt * .7; ctx.drawImage(SPR.warm, W * .2 - 6 * S + hx * 1.2, kt + 10 * S, 12 * S, 12 * S); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
     }
-    // vapur / gulet
+    // vapur / gulet ve yansıması
     if (BG.fe && ferry.x >= 0) {
       const fw = BG.fe.c.width / DPR, fh = BG.fe.c.height / DPR;
-      const fx = lerp(-fw, W + fw, ferry.x) + hx, fy = hy + 40 * S;
-      ctx.drawImage(tinted(BG.fe, V.city ? mixc(cityC, P.seaDeep, .25) : mixc(P.city, P.seaDeep, .1)), fx - fw / 2, fy - fh, fw, fh);
-      ctx.fillStyle = rgb(P.shimmer, .25); ctx.fillRect(fx - fw / 2, fy + 1, fw, 1.2);
+      const fx = lerp(-fw, W + fw, ferry.x) + hx, fy = hy + 40 * S, yb = fy - fh * .08;
+      const fc = tinted(BG.fe, mixc(V.city ? mixc(vtint(P.city, V.city, nt), P.seaDeep, .25) : mixc(P.city, P.seaDeep, .1), hz, .12));
+      ctx.drawImage(fc, fx - fw / 2, fy - fh, fw, fh);
+      ctx.globalAlpha = .22; ctx.setTransform(DPR, 0, 0, -DPR * .7, 0, DPR * yb * 1.7); ctx.drawImage(fc, 0, 0, fc.width, fc.height * .92, fx - fw / 2, fy - fh, fw, fh * .92);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.globalAlpha = 1;
+      ctx.fillStyle = rgb(P.shimmer, .22); ctx.fillRect(fx - fw / 2, yb, fw, .9);
       if (nt > .3) {
         ctx.fillStyle = `rgba(255,220,140,${nt})`;
         if (BG.kk) for (let i = 0; i < 7; i++) ctx.fillRect(fx - fw / 2 + (12 + i * 7) * S, fy - fh + 10.5 * S, 2.2 * S, 1.6 * S);
@@ -1734,23 +1939,24 @@ function drawBackground(P) {
       }
     }
     // rize: tepelerin arasında süzülen sis
-    if (BG.rows) {
+    if (BG.mist) {
       ctx.globalAlpha = .3 * (1 - nt * .5);
       const mist = tinted(SPR.mistM, P.cloud);
       for (let k = 0; k < 2; k++) {
-        const mx = ((G.t * .008 * (k ? 1.4 : 1) + k * .5) % 1.6 - .3) * W;
+        const mx = ((G.t * .006 * (k ? 1.4 : 1) + k * .5) % 1.6 - .3) * W;
         ctx.drawImage(mist, mx - W * .7, hy - (18 + k * 16) * S - 22 * S, W * 1.4, 44 * S);
       }
       ctx.globalAlpha = 1;
     }
   }
-  // balonlar (kapadokya): renkli sprite, gece koyulaşır, sepet ateşi parlar
+  // balonlar (kapadokya): pusla örtülür, gece koyulaşır, sepet ateşi parlar
   if (BG.balloons) {
+    const veil = mixc(hazeOf(P), P.skyTop, nt), va = .18 + nt * .55;
     for (const b of balloons) {
       const sp = BG.balloons[b.k], w = sp.c.width / DPR, h = sp.c.height / DPR;
-      const x = b.x * W + hx * (.4 + b.k * .1), y = b.y * H + rise * .18 + Math.sin(b.ph) * 4 * S;
+      const x = b.x * W + hx * (.4 + b.k * .1), y = b.y * H + rise * .18 + Math.sin(b.ph) * 2.5 * S;
       ctx.drawImage(sp.c, x - w / 2, y - h / 2, w, h);
-      if (nt > .05) { ctx.globalAlpha = nt * .7; ctx.drawImage(tinted(sp, P.skyTop), x - w / 2, y - h / 2, w, h); ctx.globalAlpha = 1; }
+      ctx.globalAlpha = va * (b.k % 2 ? 1.3 : 1); ctx.drawImage(tinted(sp, veil), x - w / 2, y - h / 2, w, h); ctx.globalAlpha = 1;
       if (nt > .3 && Math.sin(G.t * 1.3 + b.k * 2) > .2) {
         ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = nt * .8;
         ctx.drawImage(SPR.warm, x - 7 * S, y + h * .12 - 7 * S, 14 * S, 14 * S);
@@ -1758,12 +1964,12 @@ function drawBackground(P) {
       }
     }
   }
-  // martılar / kuşlar
+  // martılar / kuşlar: uzakta küçük, ağır kanat
   if (V.call !== 'none') {
-    const bs = V.call === 'bird' ? .6 : 1;
-    ctx.strokeStyle = rgb(P.bird, .85); ctx.lineWidth = 1.6 * S * bs; ctx.lineCap = 'round';
+    const bs = V.call === 'bird' ? .5 : .85;
+    ctx.strokeStyle = rgb(mixc(P.bird, hazeOf(P), .25), .8); ctx.lineWidth = 1.4 * S * bs; ctx.lineCap = 'round';
     for (const gg of gulls) {
-      const x = gg.x * W, y = gg.y * H + rise * .2, s = 7 * S * gg.s * bs, f = Math.sin(gg.ph) * .6;
+      const x = gg.x * W, y = gg.y * H + rise * .2, s = 6 * S * gg.s * bs, f = Math.sin(gg.ph) * .5;
       ctx.beginPath(); ctx.moveTo(x - s, y - s * f * .8); ctx.quadraticCurveTo(x - s * .5, y - s * (.6 + f * .5), x, y); ctx.quadraticCurveTo(x + s * .5, y - s * (.6 + f * .5), x + s, y - s * f * .8); ctx.stroke();
     }
   }
@@ -2065,7 +2271,7 @@ function frame(now) {
   if (fpsT >= 1) {
     fps = frames / fpsT; frames = 0; fpsT = 0;
     // uyarlanabilir çözünürlük
-    if (fps < 42 && DPR > 1.5) { slowT++; if (slowT >= 3) { dprCap = 1.5; slowT = 0; resize(); } } else slowT = 0;
+    if (fps < 42 && DPR > 1.5 && !window.__fixDpr) { slowT++; if (slowT >= 3) { dprCap = 1.5; slowT = 0; resize(); } } else slowT = 0;
   }
 }
 
@@ -2082,6 +2288,7 @@ window.__game = {
   get canRevive() { const b = $('reviveBtn'); return G.state === 'over' && !b.classList.contains('hidden'); },
   get daily() { return G.mod ? G.mod.name : null; }, get revived() { return G.revived; },
   get venue() { return VENUES[G.venue].id; }, selectVenue, setPhase(i) { G.phase = G.phaseFrom = i; G.phaseT = 1; },
+  _trans(i) { G.phaseFrom = G.phase; G.phase = i; G.phaseT = 0; }, _bg() { drawBackground(blendedPhase()); },
   setTotal(n) { G.total = n; store.set('ck_total', n); }, selectSkin, revive: () => askRevive(), openCups, closeCups,
   get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },

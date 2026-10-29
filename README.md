@@ -30,6 +30,7 @@ A one-thumb stacking game set on a tea terrace facing the Bosphorus. A brass tea
 ## Features
 
 - Canvas2D renderer with no build step and no dependencies. Every sprite (glasses, saucers, brass tray, kilim tablecloth, the four place skylines) is drawn in code and cached once per resolution. Only the active place is built; switching rebuilds it once, never during a run.
+- Places are drawn in three depth layers with baked shading and texture. Per time of day they are merged into one horizon image: sun-side rim light, soft shadow side, aerial haze that fades far layers into the sky, a horizon mist band, and water with a broken reflection and wave bands (or a valley floor). The merge reruns only when the colors change, at most 12 times per time-of-day transition.
 - All audio is synthesized with WebAudio: glass clinks, perfect-drop notes that rise along the Hicaz scale, and an ambience per place (sea and seagulls, or wind and birdsong) on its own channel.
 - Installable PWA that works offline (manifest + service worker), with high-DPI rendering, safe-area insets and adaptive resolution.
 - Best score, daily best and streak, lifetime glass count, chosen design, sugar, owned designs, gift streak, wheel spins, missions, achievements, stats, the chosen and bought places (`ck_venue`, `ck_vowned`) and settings (`ck_set`) are saved in `localStorage` (`ck_*` keys).
@@ -78,9 +79,9 @@ platform/
 ## Gotchas
 
 - Changes not showing after deploy → the service worker serves cached assets → bump `CACHE` in `docs/sw.js` (install fetches with `cache: 'reload'` so the new cache never stores HTTP-cached old files).
-- Headless timings look terrible → software rasterization, and `step()` in a tight loop queues frames that a later `getImageData` (place rebuild) has to wait for → compare places with the real rAF loop: wait, then read `window.__game.perf()` (FPS and per-frame JS time).
+- Headless timings or tests are unreliable → software rasterization, throttled rAF, and adaptive resolution silently drops DPR → drive gameplay with `window.__game.setTimeScale(0)` plus `step()`, `aimPerfect()`, `aimOffset(x)`; measure speed in the real rAF loop with `window.__game.perf()` and set `window.__fixDpr = 1` before load.
 - `build.py` stops with "expected 1 match" → a line it patches in `docs/game.js` changed → update the matching `sub1` call in `build.py`.
 - Portal SDK logs "gameplayStart() call throttled" in tests → start/stop closer than 1 s → leave real time between rounds.
-- Automated tests are flaky on timing → headless rAF is throttled → drive the game with `window.__game.setTimeScale(0)` plus `step()`, `aimPerfect()` and `aimOffset(x)`.
+- Shading baked into a backdrop mask disappears → `tinted()` repaints every pixel with one color → keep shading in a place layer's RGB (white = full color) and let `composeHorizon()` multiply it; use `tinted()` only for flat shapes.
 
 Fonts: Fraunces and Nunito, SIL Open Font License (see `docs/fonts/`).
