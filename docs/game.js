@@ -357,7 +357,56 @@ function makeSpark() {
   g.beginPath(); g.moveTo(32, 2); g.quadraticCurveTo(34, 30, 62, 32); g.quadraticCurveTo(34, 34, 32, 62); g.quadraticCurveTo(30, 34, 2, 32); g.quadraticCurveTo(30, 30, 32, 2); g.fill();
   return c;
 }
+// asma: üst köşeden sarkan dal, yapraklar ve salkım; ışık rengi RGB'de, vakit rengi sonra derecelendirmeyle gelir
+function vineLeaf(g, x, y, R, rot, dark, blur) {
+  g.save(); g.translate(x, y); g.rotate(rot);
+  g.beginPath();
+  for (let i = 0; i <= 120; i++) {
+    const a = i / 120 * TAU, d = a - Math.PI * 1.5;
+    let r = R * (.72 + .28 * Math.pow(Math.abs(Math.cos(2.5 * (a - Math.PI / 2))), .7)) + R * .035 * Math.sin(a * 26);
+    r *= 1 - .45 * Math.exp(-(d * d) / .03);   // sapın girdiği oyuk
+    const px = Math.cos(a) * r, py = R + Math.sin(a) * r;
+    i ? g.lineTo(px, py) : g.moveTo(px, py);
+  }
+  g.closePath();
+  const gr = g.createRadialGradient(0, R * .9, R * .1, 0, R, R * 1.05);
+  gr.addColorStop(0, rgb(shade([112, 138, 58], -dark * .5))); gr.addColorStop(.6, rgb(shade([70, 96, 36], -dark * .6))); gr.addColorStop(1, rgb(shade([42, 60, 22], -dark * .7)));
+  if (blur) { g.shadowColor = 'rgba(40,56,20,.9)'; g.shadowBlur = blur; }
+  g.fillStyle = gr; g.fill(); g.shadowBlur = 0;
+  // damarlar: sap dibinden beş loba
+  g.strokeStyle = `rgba(210,230,150,${.22 - dark * .12})`; g.lineWidth = R * .045;
+  for (const a of [.5, .1, .9, -.3, 1.3]) { g.beginPath(); g.moveTo(0, R * .15); g.quadraticCurveTo(Math.cos(a * Math.PI) * R * .3, R * .6, Math.cos(a * Math.PI) * R * .85, R + Math.sin(a * Math.PI) * R * .85); g.stroke(); }
+  g.restore();
+}
+function makeVine(seed) {
+  return sprite(160, 140, 0, 0, (g) => {
+    const r = seeded(seed), u = S * DPR;
+    g.lineCap = 'round';
+    const cane = (pts, w) => { g.strokeStyle = '#3b2716'; g.lineWidth = w; g.beginPath(); g.moveTo(pts[0], pts[1]); g.bezierCurveTo(pts[2], pts[3], pts[4], pts[5], pts[6], pts[7]); g.stroke(); };
+    // köşeden giren kalın dal, ondan sarkan ince bir sürgün
+    cane([-14, -4, 30, 10, 70, 2, 118, 30], 5);
+    cane([10, 6, 26, 40, 8, 70, 22, 118], 2.2);
+    // filiz kıvrımı
+    g.strokeStyle = '#4a3a1c'; g.lineWidth = 1.1; g.beginPath();
+    for (let i = 0; i < 40; i++) { const a = i * .32, rr = 7 - i * .15; i ? g.lineTo(112 + Math.cos(a) * rr, 34 + i * .5 + Math.sin(a) * rr) : g.moveTo(112 + rr, 34); }
+    g.stroke();
+    // köşede iri, öne doğru bulanık yapraklar; içe doğru küçülüp koyulaşır (derinlik)
+    const leaves = [[-8, -10, 34, .2, .15], [30, -6, 26, -.3, .55], [6, 30, 24, .5, .75], [62, 2, 21, .1, .85], [88, 16, 16, -.4, .95], [26, 56, 17, .7, .9], [-4, 78, 15, .2, .95]]
+      .map(([x, y, R, rot, dark]) => ({ x: x + (r() - .5) * 4, y, R, rot: rot + (r() - .5) * .3, dark }));
+    leaves.sort((a, b) => b.dark - a.dark);
+    // salkım: arkada, iki yaprağın arasında
+    const bx = 46 + r() * 6, by = 30;
+    for (let row = 0; row < 6; row++) for (let k = 0; k <= 5 - row; k++) {
+      const gx = bx + (k - (5 - row) / 2) * 6.4 + (r() - .5) * 1.5, gy = by + row * 6.2;
+      const gg = g.createRadialGradient(gx - 1.3, gy - 1.5, .4, gx, gy, 3.6);
+      gg.addColorStop(0, '#8a5a86'); gg.addColorStop(.5, '#4e2a52'); gg.addColorStop(1, '#2a1430');
+      g.fillStyle = gg; g.beginPath(); g.arc(gx, gy, 3.4, 0, TAU); g.fill();
+    }
+    for (const l of leaves) vineLeaf(g, l.x, l.y, l.R, l.rot, l.dark, l.dark < .6 ? (3.5 - l.dark * 4) * u : 0);
+  });
+}
 function buildSprites() {
+  for (const m of [SPR.reflM, SPR.beam, ...(SPR.vines || [])]) freeMask(m);
   SPR.glass = TEA.map((t) => makeGlass(t, false, G.skin));
   SPR.glassGold = makeGlass(hex('#a8381c'), true);
   SPR.saucer = makeSaucer(false);
@@ -371,6 +420,27 @@ function buildSprites() {
   SPR.mistM = { c: SPR.soft };
   SPR.contact = sprite(90, 20, 45, 10, (g) => softEllipse(g, 0, 0, 40, 6.5, [40, 14, 6], .42));
   SPR.kilimPattern = ctx.createPattern(SPR.tile.c, 'repeat');
+  // camda gökyüzü yansıması: her karede o anki gök rengiyle boyanır
+  SPR.reflM = sprite(64, 104, 32, 98, (g) => {
+    g.save(); glassPath(g, 0, 0, 92, 3.4); g.clip(); g.fillStyle = '#fff';
+    stripPath(g, -.98, -.6, 4, 90); g.globalAlpha = .9; g.fill();
+    stripPath(g, .62, .92, 26, 90); g.globalAlpha = .55; g.fill();
+    g.globalAlpha = .45; g.fillRect(-30, -92, 60, 7);
+    g.restore();
+  });
+  SPR.vines = [makeVine(11), makeVine(23)];
+  // ışık huzmeleri: güneşten açılan iki kama tek tuvalde (tek çizim), tepede dar, aşağı doğru sönük
+  const bc = mk(96, 256), bg = bc.getContext('2d');
+  const wedge = (x0, x1, a) => {
+    const t = mk(96, 256), tg = t.getContext('2d');
+    let gr = tg.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, `rgba(255,214,170,${a})`); gr.addColorStop(1, 'rgba(255,214,170,0)');
+    tg.fillStyle = gr; tg.beginPath(); tg.moveTo(46, 0); tg.lineTo(50, 0); tg.lineTo(x1, 256); tg.lineTo(x0, 256); tg.closePath(); tg.fill();
+    tg.globalCompositeOperation = 'destination-in'; gr = tg.createLinearGradient(x0 / 2 + 24, 0, x1 / 2 + 24, 0);
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(.5, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); tg.fillStyle = gr; tg.fillRect(0, 0, 96, 256);
+    bg.drawImage(t, 0, 0); t.width = t.height = 0;
+  };
+  wedge(0, 62, .9); wedge(58, 96, .7);
+  SPR.beam = { c: bc };
 }
 
 // ------------------------------------------------------------------ mekânlar (yalnızca görünüm ve ses; oyun kuralları her yerde aynı)
@@ -694,17 +764,32 @@ function buildBackground() {
   const sc = buildScene(VENUES[G.venue].id, u, bw, bh);
   // bulutlar: mekândan bağımsız, yalnızca çözünürlük değişince yeniden çizilir
   if (!CLOUDS || CLOUDS.u !== u) {
-    if (CLOUDS) CLOUDS.list.forEach(freeMask);
+    if (CLOUDS) CLOUDS.list.forEach((m) => { freeMask(m); freeMask(m.sh); });
     const clouds = [];
     for (let i = 0; i < 4; i++) {
-      const cw = (150 + i * 30) * u, ch = 80 * u, m = maskCanvas(cw, ch);
+      // yassı küme: geniş, basık tepecikler düz bir tabana oturur, altında ince bir stratus şeridi
+      const cw = (180 + i * 36) * u, ch = 64 * u, m = maskCanvas(cw, ch), g = m.g, base = ch * .8;
       const r2 = seeded(31 + i * 7);
-      for (let j = 0; j < 14; j++) {
-        const cx = cw * (.18 + r2() * .64), cy = ch * (.6 + r2() * .08), r = (10 + r2() * 18) * u * (1.15 - 1.6 * Math.abs(cx / cw - .5));
-        const gr = m.g.createRadialGradient(cx, cy, 0, cx, cy, r);
-        gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(.7, 'rgba(255,255,255,.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-        m.g.fillStyle = gr; m.g.beginPath(); m.g.arc(cx, cy, r, 0, TAU); m.g.fill();
+      const puff = (cx, cy, rx, ry, a) => {
+        g.save(); g.translate(cx, cy); g.scale(1, ry / rx);
+        const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+        gr.addColorStop(0, `rgba(255,255,255,${a})`); gr.addColorStop(.72, `rgba(255,255,255,${a * .85})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, TAU); g.fill(); g.restore();
+      };
+      puff(cw * .5, base - 2 * u, cw * .46, 6 * u, .7);
+      for (let j = 0; j < 11; j++) {
+        const t = .14 + r2() * .72, rx = (20 + r2() * 26) * u * (1.25 - 1.5 * Math.abs(t - .5)), ry = rx * (.42 + r2() * .2);
+        puff(cw * t, base - ry * .3, rx, ry, .95);
       }
+      g.globalCompositeOperation = 'destination-out';
+      const cut = g.createLinearGradient(0, base - 1 * u, 0, base + 5 * u); cut.addColorStop(0, 'rgba(0,0,0,0)'); cut.addColorStop(1, 'rgba(0,0,0,1)');
+      g.fillStyle = cut; g.fillRect(0, base - 1 * u, cw, ch);
+      // alt yüz gölgesi: aynı biçimin alt yarısı, ayrı renkle boyanır
+      const sh = maskCanvas(cw, ch);
+      sh.g.drawImage(m.c, 0, 0); sh.g.globalCompositeOperation = 'destination-in';
+      const sg = sh.g.createLinearGradient(0, base - 22 * u, 0, base); sg.addColorStop(0, 'rgba(0,0,0,0)'); sg.addColorStop(1, 'rgba(0,0,0,1)');
+      sh.g.fillStyle = sg; sh.g.fillRect(0, 0, cw, ch);
+      m.sh = sh;
       clouds.push(m);
     }
     const stars = []; const r3 = seeded(99);
@@ -1086,6 +1171,8 @@ function setupMode() {
   else { G.mod = null; G.ph0 = 0; rng = Math.random; }
 }
 const parts = [], rings = [], floaters = [];
+// gün batımı/şafak huzmesindeki tozlar: huzme boyunca (v) ve enine (w) konum
+const motes = Array.from({ length: 30 }, () => ({ v: Math.random(), w: Math.random() * 2 - 1, s: rand(.6, 1.4), ph: rand(0, TAU), sp: rand(.5, 1.3) }));
 let ferry = { x: -1, t: 6 }, gulls = [], gullTimer = 6;
 // kapadokya balonları: ekran oranında konum, yavaşça süzülür
 const balloons = [[.12, .2, .004], [.36, .34, .006], [.62, .14, .0035], [.84, .3, .005]].map(([x, y, v], i) => ({ x, y, v, ph: i * 1.7, k: i }));
@@ -1893,6 +1980,7 @@ function update(dt) {
   G.shake *= Math.exp(-dt * 7); G.flash *= Math.exp(-dt * 5);
   // vapur & martılar
   for (const b of balloons) { b.x += b.v * dt; b.ph += dt * .3; if (b.x > 1.15) b.x = -.15; }
+  for (const m of motes) { m.v += dt * .012 * m.sp; m.w += Math.sin(G.t * .4 + m.ph) * dt * .03; if (m.v > 1) { m.v = 0; m.w = Math.random() * 2 - 1; } }
   ferry.t -= dt;
   if (ferry.t <= 0 && ferry.x < 0) { ferry.x = 0; }
   if (ferry.x >= 0) { ferry.x += dt / 28; if (ferry.x > 1) { ferry.x = -1; ferry.t = rand(14, 26); } }
@@ -1949,6 +2037,7 @@ function drawBackground(P) {
   }
   // güneş / ay
   const sx = P.sx * W + hx * .3, sy = P.sy * H + rise * .12, sr = P.sr * S;
+  SUN.x = sx; SUN.y = sy;
   ctx.globalCompositeOperation = 'lighter';
   ctx.globalAlpha = .55; ctx.drawImage(tinted(SPR.softM, P.glow), sx - sr * 6, sy - sr * 6, sr * 12, sr * 12);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
@@ -1966,8 +2055,9 @@ function drawBackground(P) {
     if (sy2 < -100 || sy2 > H + 60) continue;
     const drift = ((i * .37 + G.t * .006 * (1 + i % 3)) % 1.4) - .2;
     const cxp = drift * W, cw = m.c.width / DPR, ch = m.c.height / DPR;
-    ctx.globalAlpha = .75 - P.night * .25;
+    ctx.globalAlpha = .8 - P.night * .25;
     ctx.drawImage(tinted(m, P.cloud), cxp - cw / 2, sy2 - ch / 2, cw, ch);
+    ctx.globalAlpha *= .6; ctx.drawImage(tinted(m.sh, mixc(P.cloud, P.skyTop, .5)), cxp - cw / 2, sy2 - ch / 2, cw, ch);
   }
   ctx.globalAlpha = 1;
   // ufuk: önceden birleştirilmiş tek tuval (kara katmanları + su/vadi)
@@ -2064,12 +2154,15 @@ function worldTransform(shx, shy) {
   ctx.setTransform(DPR * k, 0, 0, DPR * k, DPR * (W / 2 + shx - c.x * k), DPR * (H / 2 + shy + c.y * k));
 }
 function drawSprite(sp, x, y) { ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); }
+let REFL = null;
+const SUN = { x: 0, y: 0 };
 function drawPiece(p, x, y, sq) {
   // x,y: tabak altı (ekran-aşağı koordinat)
   if (sq) { ctx.save(); ctx.translate(x, y); ctx.scale(1 + sq * .5, 1 - sq); ctx.translate(-x, -y); }
   drawSprite(SPR.contact, x, y - 1);
   drawSprite(p.golden ? SPR.saucerGold : SPR.saucer, x, y);
   drawSprite(p.golden ? SPR.glassGold : SPR.glass[p.tea], x, y - LIFT);
+  if (REFL) { const a = ctx.globalAlpha, r = SPR.reflM; ctx.globalAlpha = a * .3; ctx.drawImage(REFL, x - r.ox, y - LIFT - r.oy, r.w, r.h); ctx.globalAlpha = a; }
   if (sq) ctx.restore();
 }
 function drawLights(P) {
@@ -2098,20 +2191,20 @@ function drawTable() {
   const top = 34, front = -48;
   let gr = ctx.createLinearGradient(0, -top, 0, -front);
   gr.addColorStop(0, '#6e3d24'); gr.addColorStop(.5, '#8a5032'); gr.addColorStop(1, '#a8673e');
-  ctx.fillStyle = gr; ctx.fillRect(-1400, -top, 2800, top - front);
-  ctx.fillStyle = 'rgba(255,220,170,0.08)'; for (let i = 0; i < 5; i++) ctx.fillRect(-1400, -top + 8 + i * 15, 2800, 1);
+  ctx.fillStyle = gr; ctx.fillRect(-40000, -top, 80000, top - front);
+  ctx.fillStyle = 'rgba(255,220,170,0.08)'; for (let i = 0; i < 5; i++) ctx.fillRect(-40000, -top + 8 + i * 15, 80000, 1);
   // ön kenar
   gr = ctx.createLinearGradient(0, -front, 0, -front + 13);
   gr.addColorStop(0, '#c98a56'); gr.addColorStop(.3, '#8c4f2c'); gr.addColorStop(1, '#4a2414');
-  ctx.fillStyle = gr; ctx.fillRect(-1400, -front, 2800, 13);
+  ctx.fillStyle = gr; ctx.fillRect(-40000, -front, 80000, 13);
   // kilim örtü
   ctx.save();
   const pat = SPR.kilimPattern;
   if (pat.setTransform && window.DOMMatrix) pat.setTransform(new DOMMatrix().scale(1 / SPR.tile.s, 1 / SPR.tile.s).translate(0, 0));
-  ctx.fillStyle = pat; ctx.translate(0, -front + 13); ctx.fillRect(-1400, 0, 2800, 2600);
+  ctx.fillStyle = pat; ctx.translate(0, -front + 13); ctx.fillRect(-40000, 0, 80000, 40000);
   gr = ctx.createLinearGradient(0, 0, 0, 60);
   gr.addColorStop(0, 'rgba(20,6,6,0.55)'); gr.addColorStop(1, 'rgba(20,6,6,0)');
-  ctx.fillStyle = gr; ctx.fillRect(-1400, 0, 2800, 60);
+  ctx.fillStyle = gr; ctx.fillRect(-40000, 0, 80000, 60);
   ctx.restore();
 }
 function drawRecordLine() {
@@ -2158,9 +2251,41 @@ function drawAski(h) {
   if (!h.released) drawPiece(h.spec, 0, L, 0);
   ctx.restore();
 }
+// bir vaktin karışımdaki ağırlığı (geçişte ikisi paylaşır)
+function phaseW(i) { const t = easeInOut(G.phaseT); return (G.phase === i ? t : 0) + (G.phaseFrom === i ? 1 - t : 0); }
+function drawVines() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  for (let k = 0; k < 2; k++) {
+    const sp = SPR.vines[k], a = .022 * Math.sin(G.t * .7 + k * 2) + .01 * Math.sin(G.t * 1.9 + k);
+    ctx.save();
+    if (k) { ctx.translate(W + 4 * S, -8 * S); ctx.scale(-.8, .8); } else ctx.translate(-4 * S, -2 * S);
+    ctx.rotate(a); ctx.drawImage(sp.c, 0, 0, sp.w * S, sp.h * S);
+    ctx.restore();
+  }
+}
+function drawDust(P, k) {
+  // güneşten terasa inen iki huzme ve içinde yavaşça süzülen tozlar
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const dx = W * .5 - SUN.x, dy = H * 1.05 - SUN.y, len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) - Math.PI / 2;
+  const col = tinted(SPR.beam, mixc(P.glow, [255, 230, 200], .3));
+  ctx.save(); ctx.translate(SUN.x, SUN.y); ctx.rotate(ang);
+  ctx.globalAlpha = .13 * k * (.85 + .15 * Math.sin(G.t * .5));
+  ctx.drawImage(col, -len * .38, 0, len * .76, len * .85); ctx.restore();
+  const ca = Math.cos(ang + Math.PI / 2), sa = Math.sin(ang + Math.PI / 2), n = eco() ? 15 : motes.length;
+  for (let i = 0; i < n; i++) {
+    const m = motes[i], d = m.v * len, half = d * .22;
+    const x = SUN.x + ca * d - sa * m.w * half, y = SUN.y + sa * d + ca * m.w * half;
+    const a = (1 - Math.abs(m.w)) * Math.sin(m.v * Math.PI) * (.55 + .45 * Math.sin(G.t * 2.2 * m.sp + m.ph)) * k;
+    if (a < .03) continue;
+    const s = (3 + m.v * 5) * m.s * S;
+    ctx.globalAlpha = a; ctx.drawImage(SPR.warm, x - s, y - s, s * 2, s * 2);
+  }
+  ctx.globalAlpha = 1;
+}
 function render() {
   const P = blendedPhase();
   drawBackground(P);
+  REFL = tinted(SPR.reflM, mixc(mixc(P.skyMid, P.skyBot, .5), P.glow, .25));
   const shx = (Math.random() - .5) * G.shake * S, shy = (Math.random() - .5) * G.shake * S;
   worldTransform(shx, shy);
   const bulbs = drawLights(P);
@@ -2170,7 +2295,8 @@ function render() {
   // kule
   const n = G.pieces.length;
   const trem = G.state === 'playing' && G.risk > .7 ? (G.risk - .7) / .3 : 0;
-  for (let i = 0; i < n; i++) {
+  const vh = H / (2 * S * G.cam.z), lo = Math.max(0, Math.floor((G.cam.y - vh) / PH) - 1), hi = Math.min(n, Math.ceil((G.cam.y + vh) / PH) + 1);
+  for (let i = lo; i < hi; i++) {
     const p = G.pieces[i];
     const age = G.t - p.born;
     const sq = age < .5 ? Math.sin(age * 20) * Math.exp(-age * 9) * .12 : 0;
@@ -2206,11 +2332,14 @@ function render() {
     else if (p.kind === 'shard') { ctx.save(); ctx.translate(p.x, -p.y); ctx.rotate(p.rot); ctx.fillStyle = `rgba(235,245,255,${.8 - t * .6})`; ctx.beginPath(); ctx.moveTo(-p.size, 0); ctx.lineTo(0, -p.size * .5); ctx.lineTo(p.size * .7, p.size * .4); ctx.fill(); ctx.restore(); }
     else if (p.kind === 'porcelain' || p.kind === 'sugar') { ctx.save(); ctx.translate(p.x, -p.y); ctx.rotate(p.rot); ctx.fillStyle = p.kind === 'sugar' ? `rgba(255,253,246,${1 - t * t})` : `rgba(246,238,226,${1 - t})`; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * (p.kind === 'sugar' ? 1 : .6)); if (p.kind === 'sugar') { ctx.fillStyle = `rgba(200,180,150,${.5 * (1 - t * t)})`; ctx.fillRect(-p.size / 2, p.size * .2, p.size, p.size * .3); } ctx.restore(); }
   }
+  drawVines();
   // renk grade
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'multiply';
   ctx.drawImage(gradeOverlay(P.grade), 0, 0, cv.width, cv.height);
   ctx.globalCompositeOperation = 'lighter';
+  const dk = phaseW(1) + phaseW(3) * .7;
+  if (dk > .02) drawDust(P, dk);
   worldTransform(shx, shy);
   // gece ışıkları
   if (P.night > .15) {
