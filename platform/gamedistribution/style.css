@@ -204,3 +204,24 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .list-head{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#a8321c;margin:6px 2px 0}
 .list-head:first-child{margin-top:0}
 @media (max-height:760px){.modes{flex-wrap:nowrap;gap:6px}.modes .mode-btn{flex:1 1 0;padding:8px 4px;border-radius:14px}.mode-btn b{font-size:13px}.mode-btn small{font-size:10px}#title .bottom{gap:10px}.mode-btn.dot::after{top:4px;right:4px;width:7px;height:7px}}
+
+/* ayarlar */
+.top-btns{display:flex;gap:8px}
+.btn.ghost.tight{margin-top:0}
+.set-panel{max-height:calc(100% - 8px);overflow:auto}
+.set-panel h2{margin-bottom:14px}
+.set-list{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;text-align:left}
+.set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:56px;padding:10px 14px;border-radius:16px;background:rgba(120,60,30,.07);text-align:left;color:var(--ink);transition:transform .12s}
+.set-row:active{transform:scale(.98)}
+.set-row b,.set-lbl b{display:block;font-size:15px;font-weight:900}
+.set-row small,.set-lbl small{display:block;font-size:12px;font-weight:700;opacity:.6;margin-top:1px}
+.sw{flex:none;width:46px;height:28px;border-radius:99px;background:rgba(120,60,30,.22);position:relative;transition:background .2s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(60,20,10,.3);transition:transform .22s cubic-bezier(.3,1.4,.5,1)}
+.set-row[aria-checked="true"] .sw{background:linear-gradient(180deg,#c0452a,#9a2b17)}
+.set-row[aria-checked="true"] .sw::after{transform:translateX(18px)}
+.set-gfx{padding:11px 14px 12px;border-radius:16px;background:rgba(120,60,30,.07)}
+.seg{display:flex;gap:4px;margin-top:9px;padding:3px;border-radius:12px;background:rgba(120,60,30,.1)}
+.seg button{flex:1;min-height:36px;padding:6px 4px;border-radius:9px;font-size:13px;font-weight:800;color:#7a3a28;transition:background .2s}
+.seg button[aria-pressed="true"]{background:#fff6e8;color:#5a1c12;box-shadow:0 2px 8px rgba(90,30,10,.18)}
+.chev{width:18px;height:18px;flex:none;fill:none;stroke:#7a3a28;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+@media (max-height:640px){.set-panel{padding:18px 18px 16px}.set-panel h2{margin:4px 0 10px;font-size:26px}.set-row{min-height:48px;padding:7px 12px}.set-gfx{padding:8px 12px 9px}.set-list{gap:5px;margin-bottom:12px}}

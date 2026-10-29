@@ -16,6 +16,11 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
 };
+// ayarlar: efekt/ortam sesi, titreşim, grafik kalitesi (auto | high | eco)
+const SET = (() => { const d = { sfx: true, amb: true, vib: true, gfx: 'auto' }; try { return Object.assign(d, JSON.parse(store.get('ck_set', '{}'))); } catch (e) { return d; } })();
+function saveSet() { store.set('ck_set', JSON.stringify(SET)); }
+const GFX_CAP = { auto: 2.5, high: 3, eco: 1.25 };
+const eco = () => SET.gfx === 'eco';
 const hex = (h) => { h = h.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)]; };
 const rgb = (c, a) => a == null ? `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})` : `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
@@ -75,7 +80,7 @@ const DAILY = [
 // ------------------------------------------------------------------ canvas / sizing
 const cv = $('c');
 const ctx = cv.getContext('2d', { alpha: false });
-let W = 390, H = 844, DPR = 1, S = 1, dprCap = 2.5;
+let W = 390, H = 844, DPR = 1, S = 1, dprCap = GFX_CAP[SET.gfx] || 2.5;
 const SPR = {};
 let BG = null;
 
@@ -481,7 +486,7 @@ function tinted(m, color) {
 
 // ------------------------------------------------------------------ audio
 const Snd = (() => {
-  let ac = null, master = null, dry = null, verb = null, amb = null;
+  let ac = null, master = null, dry = null, verb = null, amb = null, sfx = null, ambBus = null;
   let muted = store.get('ck_mute', '0') === '1', forced = false;
   const HICAZ = [0, 1, 4, 5, 7, 8, 10, 12, 13, 16, 17, 19, 20, 22, 24, 25, 28];
   function init() {
@@ -491,11 +496,14 @@ const Snd = (() => {
     master = ac.createGain(); master.gain.value = (muted || forced) ? 0 : .9;
     const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
     master.connect(comp); comp.connect(ac.destination);
-    dry = ac.createGain(); dry.connect(master);
+    // iki alt hat: efektler ve ortam (deniz, martı); ikisi de master'a bağlı, sessize alma hâlâ her şeyi keser
+    sfx = ac.createGain(); sfx.gain.value = SET.sfx ? 1 : 0; sfx.connect(master);
+    ambBus = ac.createGain(); ambBus.gain.value = SET.amb ? 1 : 0; ambBus.connect(master);
+    dry = ac.createGain(); dry.connect(sfx);
     verb = ac.createConvolver();
     const len = ac.sampleRate * 2.2, ir = ac.createBuffer(2, len, ac.sampleRate);
     for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
-    verb.buffer = ir; const vg = ac.createGain(); vg.gain.value = .32; verb.connect(vg); vg.connect(master);
+    verb.buffer = ir; const vg = ac.createGain(); vg.gain.value = .32; verb.connect(vg); vg.connect(sfx);
     ambience();
   }
   const now = () => ac.currentTime;
@@ -528,18 +536,39 @@ const Snd = (() => {
     const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520;
     const g = ac.createGain(); g.gain.value = .07;
     const lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = .09; lg.gain.value = .045; lfo.connect(lg); lg.connect(g.gain);
-    s.connect(lp); lp.connect(g); g.connect(master); s.start(); lfo.start();
-    amb = { g };
+    s.connect(lp); lp.connect(g); g.connect(ambBus); s.start(); lfo.start();
+    amb = { g, lp, lg };
+    setScene(scene);
+  }
+  // mekâna göre ortam: deniz kıyısında dalga + martı, karada rüzgâr + kuş
+  let scene = { water: true, call: 'gull' };
+  function setScene(sc) {
+    scene = sc;
+    if (!amb) return;
+    const t = now();
+    amb.lp.frequency.setTargetAtTime(sc.water ? 520 : 340, t, .4);
+    amb.g.gain.setTargetAtTime(sc.water ? .07 : .05, t, .4);
+    amb.lg.gain.setTargetAtTime(sc.water ? .045 : .03, t, .4);
   }
   function gull() {
     if (!ac || muted || forced || ac.state !== 'running') return;
     const t = now() + .05;
+    if (scene.call === 'bird') {
+      // kısa ötüşler: iki-üç hızlı yukarı kayan cıvıltı
+      for (let k = 0; k < 3; k++) {
+        const o = ac.createOscillator(), g = ac.createGain(), t0 = t + k * .14 + Math.random() * .04, f = 2600 + Math.random() * 900;
+        o.type = 'sine'; o.frequency.setValueAtTime(f, t0); o.frequency.exponentialRampToValueAtTime(f * 1.45, t0 + .07);
+        env(g, t0, .008, .012, .09); o.connect(g); g.connect(ambBus); o.start(t0); o.stop(t0 + .14);
+      }
+      return;
+    }
+    if (scene.call === 'none') return;
     for (let k = 0; k < 2; k++) {
       const o = ac.createOscillator(), g = ac.createGain(), bp = ac.createBiquadFilter();
       const t0 = t + k * .32;
       o.type = 'triangle'; o.frequency.setValueAtTime(1500, t0); o.frequency.exponentialRampToValueAtTime(2300, t0 + .06); o.frequency.exponentialRampToValueAtTime(1150, t0 + .26);
       bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 2.5;
-      env(g, t0, .02, .018, .26); o.connect(bp); bp.connect(g); g.connect(dry); g.connect(verb); o.start(t0); o.stop(t0 + .35);
+      env(g, t0, .02, .018, .26); o.connect(bp); bp.connect(g); g.connect(ambBus); o.start(t0); o.stop(t0 + .35);
     }
   }
   const api = {
@@ -547,6 +576,8 @@ const Snd = (() => {
     get muted() { return muted; },
     toggle() { muted = !muted; store.set('ck_mute', muted ? '1' : '0'); if (master) master.gain.setTargetAtTime((muted || forced) ? 0 : .9, now(), .05); return muted; },
     setForced(v) { forced = !!v; if (master) master.gain.setTargetAtTime((muted || forced) ? 0 : .9, now(), .02); if (forced) api.suspend(); else if (!document.hidden) api.resume(); },
+    bus(k, on) { const b = k === 'amb' ? ambBus : sfx; if (b) b.gain.setTargetAtTime(on ? 1 : 0, now(), .05); },
+    setScene,
     suspend() { if (ac && ac.state === 'running') ac.suspend().catch(() => {}); },
     resume() { if (ac && ac.state === 'suspended') ac.resume().catch(() => {}); },
     note(i) { const s = HICAZ[Math.min(i, HICAZ.length - 1)]; return 587.33 * Math.pow(2, s / 12); },
@@ -924,15 +955,37 @@ function refreshTitle() {
   ui.wallet(false);
 }
 // paneller (koleksiyon, hediye, başarımlar): açıkken oyun dokunuşu kapalı
+// ayarlar moladan da açılır; mola ekranı arkada saklanır, kapanınca geri gelir
 function openPanel(id) {
-  if (G.state !== 'title' || G.panel) return;
+  if (G.panel || !(G.state === 'title' || (id === 'set' && G.state === 'paused'))) return;
   G.panel = id;
-  if (id === 'cups') renderCups(); else if (id === 'gift') renderGift(); else { renderAch(); store.set('ck_misSeen', dayKey()); }
+  if (id === 'cups') renderCups(); else if (id === 'gift') renderGift(); else if (id === 'set') renderSet(); else { renderAch(); store.set('ck_misSeen', dayKey()); }
+  if (G.state === 'paused') show('pause', false);
   show(id, true);
 }
 function closePanel() {
   if (!G.panel || wheelAnim) return;
-  show(G.panel, false); G.panel = null; refreshTitle();
+  show(G.panel, false); G.panel = null;
+  if (G.state === 'paused') show('pause', true);
+  refreshTitle();
+}
+const GFX_NOTE = { eco: 'Daha az efekt, daha uzun pil', auto: 'Cihaza göre kendini ayarlar', high: 'En keskin görüntü' };
+function renderSet() {
+  document.querySelectorAll('.set-row[data-k]').forEach((el) => el.setAttribute('aria-checked', SET[el.dataset.k] ? 'true' : 'false'));
+  document.querySelectorAll('#gfxSeg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === SET.gfx ? 'true' : 'false'));
+  $('gfxNote').textContent = tr(GFX_NOTE[SET.gfx]);
+  $('tutNote').textContent = tr(G.tutorial ? 'Bir sonraki elde gösterilecek' : 'Bir sonraki elde ipucu');
+  show('vibRow', !!navigator.vibrate);
+}
+function toggleSet(k) {
+  SET[k] = !SET[k]; saveSet();
+  if (k === 'vib') vibrate(15); else Snd.bus(k, SET[k]);
+  Snd.click(); renderSet();
+}
+function setGfx(v) {
+  if (!GFX_CAP[v] || v === SET.gfx) return;
+  SET.gfx = v; saveSet(); dprCap = GFX_CAP[v]; slowT = 0;
+  resize(); Snd.click(); renderSet();
 }
 function openCups() { openPanel('cups'); }
 function closeCups() { if (G.panel === 'cups') closePanel(); }
@@ -1181,7 +1234,7 @@ function share() {
 }
 
 // ------------------------------------------------------------------ effects
-function vibrate(p) { try { if (navigator.vibrate && !Snd.muted) navigator.vibrate(p); } catch (e) {} }
+function vibrate(p) { try { if (navigator.vibrate && !Snd.muted && SET.vib) navigator.vibrate(p); } catch (e) {} }
 function burst(x, y, n, kind, col) {
   for (let i = 0; i < n; i++) {
     const a = rand(0, TAU), sp = rand(60, 260);
@@ -1197,7 +1250,7 @@ function burst(x, y, n, kind, col) {
 function perfectFx(x, y, c, golden) {
   rings.push({ x, y: y + PH, t: 0, max: .6, r0: 24, r1: 70 + Math.min(c, 8) * 6, golden });
   if (c >= 3) rings.push({ x, y: y + PH, t: -.08, max: .7, r0: 30, r1: 100 + Math.min(c, 8) * 8, golden });
-  const n = 10 + Math.min(c, 10) * 2 + (golden ? 14 : 0);
+  const n = (10 + Math.min(c, 10) * 2 + (golden ? 14 : 0)) * (eco() ? .5 : 1);
   for (let i = 0; i < n; i++) {
     const a = rand(0, TAU), sp = rand(80, 260);
     parts.push({ x: x + Math.cos(a) * 26, y: y + PH + Math.sin(a) * 4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .5 + rand(40, 200), life: 0, max: rand(.5, .95), size: rand(4, 10) * (golden ? 1.3 : 1), kind: 'spark', g: -60, rot: 0, vr: 0 });
@@ -1269,8 +1322,9 @@ function update(dt) {
   // buhar
   if (G.pieces.length && (G.state !== 'over')) {
     tdisp += dt;
-    while (tdisp > .16) {
-      tdisp -= .16; const tp = G.pieces[G.pieces.length - 1];
+    const sti = eco() ? .32 : .16;
+    while (tdisp > sti) {
+      tdisp -= sti; const tp = G.pieces[G.pieces.length - 1];
       parts.push({ x: tp.x + rand(-12, 12), y: topY() - 6, vx: rand(-6, 6), vy: rand(16, 30), life: 0, max: rand(1.8, 2.6), size: rand(7, 12), kind: 'steam', g: -4, rot: rand(0, TAU), vr: 0 });
     }
   }
@@ -1333,7 +1387,9 @@ function drawBackground(P) {
   // yıldızlar
   const sa = clamp(P.stars + alt * .5, 0, 1);
   if (sa > .02) {
-    for (const s of BG.stars) {
+    const sstep = eco() ? 2 : 1;
+    for (let si = 0; si < BG.stars.length; si += sstep) {
+      const s = BG.stars[si];
       const tw = .55 + .45 * Math.sin(G.t * 1.7 + s[3]);
       ctx.fillStyle = `rgba(255,250,235,${sa * tw * .9})`;
       const y = (s[1] * H + rise * .05) % H;
@@ -1381,7 +1437,8 @@ function drawBackground(P) {
     gr.addColorStop(0, rgb(mixc(P.sea, P.skyBot, .25))); gr.addColorStop(1, rgb(P.seaDeep));
     ctx.fillStyle = gr; ctx.fillRect(0, hy, W, H - hy + 2);
     // parıltı
-    for (let i = 0; i < 46; i++) {
+    const shs = eco() ? 2 : 1;
+    for (let i = 0; i < 46; i += shs) {
       const yy = hy + 4 + Math.pow(i / 46, 1.6) * H * .32;
       const spread = 18 + i * 2.2;
       const xx = sx + Math.sin(i * 12.9 + G.t * (.6 + (i % 5) * .2)) * spread;
@@ -1629,7 +1686,7 @@ function pause() {
   G.prev = G.state; G.state = 'paused'; show('pause', true); Snd.suspend(); if (!document.hidden && document.hasFocus()) PF.gameplayStop();
 }
 function resume() {
-  if (G.state !== 'paused') return;
+  if (G.state !== 'paused' || G.panel) return;
   G.state = G.prev || 'playing'; show('pause', false); Snd.init(); Snd.resume(); last = performance.now(); PF.gameplayStart();
 }
 function goHome() {
@@ -1666,7 +1723,12 @@ $('dailyBtn').addEventListener('click', (e) => { e.stopPropagation(); if (G.stat
 $('cupsBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('cups'); });
 $('giftBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('gift'); });
 $('achBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('ach'); });
-for (const id of ['cupsClose', 'giftClose', 'achClose']) $(id).addEventListener('click', (e) => { e.stopPropagation(); closePanel(); });
+$('setBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('set'); });
+$('setBtnP').addEventListener('click', (e) => { e.stopPropagation(); Snd.click(); openPanel('set'); });
+document.querySelectorAll('.set-row[data-k]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); if (G.state !== 'paused') Snd.init(); toggleSet(b.dataset.k); }));
+document.querySelectorAll('#gfxSeg button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); setGfx(b.dataset.v); }));
+$('tutBtn').addEventListener('click', (e) => { e.stopPropagation(); G.tutorial = true; G.tutDone = 0; store.set('ck_tut', '0'); Snd.click(); renderSet(); });
+for (const id of ['cupsClose', 'giftClose', 'achClose', 'setClose']) $(id).addEventListener('click', (e) => { e.stopPropagation(); closePanel(); });
 $('claimBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); claimGift(); });
 $('spinBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askSpin(); });
 $('shareBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });

@@ -33,10 +33,15 @@
 <div id="title" class="screen">
   <div class="top-row">
     <div class="wallet" aria-label="Şeker"><svg><use href="#i-sugar"/></svg><b class="walletN">0</b></div>
-    <button class="icon-btn soundBtn" aria-label="Sesi aç/kapat">
-      <svg class="on" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
-      <svg class="off" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
-    </button>
+    <div class="top-btns">
+      <button id="setBtn" class="icon-btn" aria-label="Ayarlar">
+        <svg viewBox="0 0 24 24"><path class="w" d="M4 7h9M17.4 7H20M4 17h2.6M11 17h9"/><circle class="w" cx="15.2" cy="7" r="2.2"/><circle class="w" cx="8.8" cy="17" r="2.2"/></svg>
+      </button>
+      <button class="icon-btn soundBtn" aria-label="Sesi aç/kapat">
+        <svg class="on" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+        <svg class="off" viewBox="0 0 24 24"><path d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z"/><path class="w" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+      </button>
+    </div>
   </div>
   <div class="logo">
     <div class="eyebrow">Boğaz'a karşı</div>
@@ -67,7 +72,8 @@
     <div class="eyebrow">Mola</div>
     <h2>Çay demleniyor…</h2>
     <button id="resumeBtn" class="btn primary">Devam et</button>
-    <button id="homeBtn" class="btn ghost">Ana ekran</button>
+    <button id="setBtnP" class="btn ghost">Ayarlar</button>
+    <button id="homeBtn" class="btn ghost tight">Ana ekran</button>
   </div>
 </div>
 
@@ -105,6 +111,24 @@
     <h2>Görevler</h2>
     <div class="ach-list" id="achList"></div>
     <button id="achClose" class="btn primary">Kapat</button>
+  </div>
+</div>
+
+<div id="set" class="screen dim hidden">
+  <div class="panel set-panel">
+    <div class="eyebrow">Tercihler</div>
+    <h2>Ayarlar</h2>
+    <div class="set-list">
+      <button class="set-row" data-k="sfx" role="switch" aria-checked="true"><span><b>Ses efektleri</b><small>Bardak, kombo, devrilme</small></span><i class="sw"></i></button>
+      <button class="set-row" data-k="amb" role="switch" aria-checked="true"><span><b>Ortam sesi</b><small>Dalga, rüzgâr, kuşlar</small></span><i class="sw"></i></button>
+      <button class="set-row" data-k="vib" id="vibRow" role="switch" aria-checked="true"><span><b>Titreşim</b><small>Dokunuşta hafif titreşim</small></span><i class="sw"></i></button>
+      <div class="set-gfx">
+        <div class="set-lbl"><b>Grafik</b><small id="gfxNote"></small></div>
+        <div class="seg" id="gfxSeg"><button data-v="eco">Pil dostu</button><button data-v="auto">Otomatik</button><button data-v="high">Yüksek</button></div>
+      </div>
+      <button class="set-row" id="tutBtn"><span><b>Öğreticiyi göster</b><small id="tutNote">Bir sonraki elde ipucu</small></span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <button id="setClose" class="btn primary">Kapat</button>
   </div>
 </div>
 
