@@ -585,26 +585,38 @@ function sceneBodrum(u, bw, bh, rnd, thumb) {
 }
 const SCENES = { bogaz: sceneBogaz, rize: sceneRize, kapadokya: sceneKapadokya, bodrum: sceneBodrum };
 function buildScene(id, u, bw, bh, thumb) { return (SCENES[id] || sceneBogaz)(u, bw, bh, seeded(7), thumb); }
+// eski arka plan canvas'larını hemen boşalt: iOS canvas belleğini geç bırakır, art arda mekân değişimi sınırı aşmasın
+function freeMask(m) { if (!m) return; for (const c of [m.c, m._t]) if (c) c.width = c.height = 0; m._key = null; }
+let CLOUDS = null;
 function buildBackground() {
   const u = S * DPR;
   const bw = Math.ceil(W * DPR * 1.5), bh = Math.ceil(170 * u);
-  const sc = buildScene(VENUES[G.venue].id, u, bw, bh);
-  // bulutlar
-  const clouds = [];
-  for (let i = 0; i < 4; i++) {
-    const cw = (150 + i * 30) * u, ch = 80 * u, m = maskCanvas(cw, ch);
-    const r2 = seeded(31 + i * 7);
-    for (let j = 0; j < 14; j++) {
-      const cx = cw * (.18 + r2() * .64), cy = ch * (.6 + r2() * .08), r = (10 + r2() * 18) * u * (1.15 - 1.6 * Math.abs(cx / cw - .5));
-      const gr = m.g.createRadialGradient(cx, cy, 0, cx, cy, r);
-      gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(.7, 'rgba(255,255,255,.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-      m.g.fillStyle = gr; m.g.beginPath(); m.g.arc(cx, cy, r, 0, TAU); m.g.fill();
-    }
-    clouds.push(m);
+  if (BG) {
+    for (const k of ['far', 'city', 'rows', 'kk', 'fe']) freeMask(BG[k]);
+    if (BG.balloons) BG.balloons.forEach(freeMask);
+    BG.ov.width = BG.ov.height = 0;
   }
-  const stars = []; const r3 = seeded(99);
-  for (let i = 0; i < 140; i++) stars.push([r3(), r3() * .75, .4 + r3() * 1.2, r3() * TAU]);
-  BG = { bw, bh, ...sc, clouds, stars, ov: mk(Math.ceil(W / 3), Math.ceil(H / 3)), ovKey: '' };
+  const sc = buildScene(VENUES[G.venue].id, u, bw, bh);
+  // bulutlar: mekândan bağımsız, yalnızca çözünürlük değişince yeniden çizilir
+  if (!CLOUDS || CLOUDS.u !== u) {
+    if (CLOUDS) CLOUDS.list.forEach(freeMask);
+    const clouds = [];
+    for (let i = 0; i < 4; i++) {
+      const cw = (150 + i * 30) * u, ch = 80 * u, m = maskCanvas(cw, ch);
+      const r2 = seeded(31 + i * 7);
+      for (let j = 0; j < 14; j++) {
+        const cx = cw * (.18 + r2() * .64), cy = ch * (.6 + r2() * .08), r = (10 + r2() * 18) * u * (1.15 - 1.6 * Math.abs(cx / cw - .5));
+        const gr = m.g.createRadialGradient(cx, cy, 0, cx, cy, r);
+        gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(.7, 'rgba(255,255,255,.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        m.g.fillStyle = gr; m.g.beginPath(); m.g.arc(cx, cy, r, 0, TAU); m.g.fill();
+      }
+      clouds.push(m);
+    }
+    const stars = []; const r3 = seeded(99);
+    for (let i = 0; i < 140; i++) stars.push([r3(), r3() * .75, .4 + r3() * 1.2, r3() * TAU]);
+    CLOUDS = { u, list: clouds, stars };
+  }
+  BG = { bw, bh, ...sc, clouds: CLOUDS.list, stars: CLOUDS.stars, ov: mk(Math.ceil(W / 3), Math.ceil(H / 3)), ovKey: '' };
 }
 // renk grade + vinyet tek bir multiply katmanında (düşük çözünürlük, yumuşak)
 function gradeOverlay(gc) {
