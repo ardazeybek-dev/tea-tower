@@ -292,3 +292,11 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .share-btn.inst-o{right:auto;left:8px;background:rgba(224,168,58,.22)}
 .icon-btn.install{background:rgba(255,215,140,.28);border-color:rgba(255,226,168,.6);animation:pop .45s cubic-bezier(.2,1.6,.4,1) both}
 @media (min-aspect-ratio:3/5){#title .tag{display:none}}
+/* meydan okuma: HUD hedefi, başlık kartı, bitişteki çağrı butonu */
+#target{display:inline-block;margin-top:2px;padding:3px 12px;border-radius:99px;font-weight:800;font-size:13px;letter-spacing:.06em;color:#fff1d6;background:rgba(30,12,24,.32);border:1px solid rgba(255,226,168,.35)}
+#target.won{color:#3a2208;background:linear-gradient(180deg,#ffe08a,#e9b14a);border-color:transparent}
+.ch-chip{display:flex;align-items:center;gap:4px;padding:4px 4px 4px 14px;border-color:rgba(255,215,154,.55);background:rgba(120,40,20,.45)}
+.ch-chip button{width:30px;height:30px;margin-left:6px;border-radius:50%;font-size:18px;line-height:1;color:#fff1d6;background:rgba(255,255,255,.12)}
+.btn.ch-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;border:1.5px solid rgba(168,50,28,.35);border-radius:16px;padding:10px}
+.btn.ch-btn svg{width:18px;height:18px;fill:none;stroke:#a8321c;stroke-width:2.2;stroke-linecap:round}
+.pf-ads .ch-btn,.pf-ads .ch-chip{display:none}

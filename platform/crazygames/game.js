@@ -1069,7 +1069,7 @@ const G = {
   cam: { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 }, shake: 0, flash: 0,
   phase: 0, phaseFrom: 0, phaseT: 1, overAt: 0, spawnIn: 0, lastGolden: false,
   tutorial: store.get('ck_tut', '0') !== '1', tutDone: 0,
-  mode: 'classic', mod: null, ph0: 0, revived: false, panel: null, offerRevive: false, runSugar: 0,
+  mode: 'classic', mod: null, ph0: 0, seed: 1, ch: null, revived: false, panel: null, offerRevive: false, runSugar: 0,
   total: parseInt(store.get('ck_total', '0'), 10) || 0, skin: parseInt(store.get('ck_skin', '0'), 10) || 0,
   venue: parseInt(store.get('ck_venue', '0'), 10) || 0,
 };
@@ -1083,7 +1083,7 @@ function venueOpen(i) { const v = VENUES[i]; return !!v && (i === 0 || vowned.ha
 if (!venueOpen(G.venue)) G.venue = 0;
 // şeker cüzdanı + kalıcı sayaçlar (başarımlar bunlardan okunur)
 const jget = (k, d) => { try { return Object.assign(d, JSON.parse(store.get(k, '{}'))); } catch (e) { return d; } };
-const ST = jget('ck_stats', { gold: 0, bestH: 0, bestCombo: 0, bestScore: 0, dailyBest: 0, loginBest: 0, spins: 0 });
+const ST = jget('ck_stats', { gold: 0, bestH: 0, bestCombo: 0, bestScore: 0, dailyBest: 0, loginBest: 0, spins: 0, chWins: 0 });
 function saveStats() { store.set('ck_stats', JSON.stringify(ST)); }
 const Wallet = {
   n: parseInt(store.get('ck_sugar', '0'), 10) || 0,
@@ -1170,8 +1170,38 @@ function spinsUsed() { const p = readPair('ck_spin'); return p.key === dayKey() 
 function spinState() { const u = spinsUsed(); return { free: u < 1, extra: u === 1 && !!window.PF && rewardReady() }; }
 function setupMode() {
   if (G.mode === 'daily') { const d = dailyToday(); G.mod = d.mod; G.ph0 = d.ph0; rng = seeded(d.num * 7 + 1); }
-  else { G.mod = null; G.ph0 = 0; rng = Math.random; }
+  else { G.mod = null; G.ph0 = 0; G.seed = G.mode === 'challenge' ? G.ch.seed : 1 + (Math.random() * 2147483646 | 0); rng = seeded(G.seed); }
 }
+// meydan okuma: link bardak dizisini (tohum) ve geçilecek puanı taşır; kurallar klasikle aynı, ikinci şans yok
+const CH_URL = 'https://ardazeybek-dev.github.io/tea-tower/';
+const chSum = (s, n) => ((s % 1296) * 7 + n * 13) % 1296;
+function chLink(seed, n) { return `${CH_URL}?c=${seed.toString(36)}.${n.toString(36)}.${chSum(seed, n).toString(36)}`; }
+function readChallenge() {
+  if (window.PF) return null;
+  let m = null;
+  try {
+    const u = new URL(location.href);
+    m = /^([0-9a-z]{1,7})\.([0-9a-z]{1,4})\.([0-9a-z]{1,2})$/.exec(u.searchParams.get('c') || '');
+    // yenileyince ya da ana ekrandan açınca tekrar tetiklenmesin
+    if (u.searchParams.has('c')) { u.searchParams.delete('c'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
+  } catch (e) {}
+  if (!m) return null;
+  const seed = parseInt(m[1], 36), target = parseInt(m[2], 36);
+  if (!(seed > 0 && seed < 2147483648 && target > 0 && target <= 5000 && chSum(seed, target) === parseInt(m[3], 36))) return null;
+  return { seed, target, done: false };
+}
+// kazanma ödülü tohum başına bir kez ve yalnızca gerçek bir hedefte (elle yazılmış ?c=…1 linkleri şeker basmasın)
+const CH_PRIZE = 30;
+function chReward() {
+  const k = G.ch.seed.toString(36), won = store.get('ck_chwon', '').split(',').filter(Boolean);
+  if (G.ch.target < 10 || won.includes(k)) return 0;
+  won.push(k); store.set('ck_chwon', won.slice(-40).join(','));
+  ST.chWins = (ST.chWins || 0) + 1; saveStats();
+  G.runSugar += CH_PRIZE; Wallet.add(CH_PRIZE);
+  return CH_PRIZE;
+}
+// paylaşılan skor ancak adil bir koşudan çıkarsa meydan okumaya dönüşür
+const chShareable = () => !window.PF && G.mode !== 'daily' && !G.revived && G.score >= 5;
 const parts = [], rings = [], floaters = [];
 // gün batımı/şafak huzmesindeki tozlar: huzme boyunca (v) ve enine (w) konum
 const motes = Array.from({ length: 30 }, () => ({ v: Math.random(), w: Math.random() * 2 - 1, s: rand(.6, 1.4), ph: rand(0, TAU), sp: rand(.5, 1.3) }));
@@ -1212,7 +1242,7 @@ function resetWorld() {
   G.pieces.length = 0; G.bodies.length = 0; parts.length = 0; rings.length = 0; floaters.length = 0;
   G.drop = null; G.topple = null; G.score = 0; G.combo = 0; G.maxCombo = 0; G.perfects = 0; G.risk = 0; G.warned = false; G.recordShown = false;
   G.lastGolden = false; G.revived = false; G.offerRevive = false; G.runSugar = 0;
-  G.recCrossed = false; G.recT = 0; G.mile = 0;
+  G.recCrossed = false; G.recT = 0; G.mile = 0; G.chBeat = false;
 }
 function demoTower() {
   resetWorld();
@@ -1225,6 +1255,7 @@ function demoTower() {
 function startGame(mode) {
   Snd.init(); Snd.start();
   if (mode) G.mode = mode;
+  if (G.mode === 'challenge' && !G.ch) G.mode = 'classic';
   setupMode();
   // rekor şeridi koşu başındaki en yüksek kuleye sabitlenir (koşu içinde ST.bestH büyür)
   G.bestH0 = G.mode === 'daily' ? 0 : ST.bestH;
@@ -1233,7 +1264,7 @@ function startGame(mode) {
   G.state = 'playing';
   G.phaseFrom = G.phase; G.phase = G.ph0; G.phaseT = G.phaseFrom === G.phase ? 1 : 0;
   spawnHang();
-  ui.score(0, false); ui.combo('');
+  ui.score(0, false); ui.combo(''); ui.target();
   if (G.mod) floater(0, 230, `${tr('Günlük çay')} · ${tr(G.mod.name)}`, '#ffe2a8', 22, true);
   misEvent('runs', 1); if (G.mode === 'daily') misEvent('daily', 1);
   store.set('ck_runs', (parseInt(store.get('ck_runs', '0'), 10) || 0) + 1);
@@ -1245,7 +1276,7 @@ let adLock = false;
 function tap() {
   if (adLock) return;
   if (G.panel) return;
-  if (G.state === 'title') { startGame('classic'); return; }
+  if (G.state === 'title') { startGame(G.ch ? 'challenge' : 'classic'); return; }
   // ikinci şans açıkken boş yere dokunmak hakkı yakmasın: seçim butonlarla
   if (G.state === 'over' && G.offerRevive) return;
   if (G.state === 'over') { if (performance.now() - G.overAt > 450) PF.adBreak(startGame); return; }
@@ -1318,6 +1349,11 @@ function land() {
     G.mile = h / 25; const b = 10 * G.mile;
     G.runSugar += b; Wallet.add(b); Snd.record(); confetti(24); vibrate([15, 30, 15, 30, 15]);
     floater(topX(), topY() + 240, `${tr('Kat')} ${h}! +${b}`, '#ffe08a', 30, true);
+  }
+  // meydan okuma hedefi geçildi
+  if (G.mode === 'challenge' && !G.chBeat && G.score > G.ch.target) {
+    G.chBeat = true; G.flash = 1; Snd.record(); confetti(30); vibrate([15, 30, 15]); ui.target();
+    floater(topX(), topY() + 200, tr('Hedef geçildi!'), '#ffe08a', 30, true);
   }
   // rekor
   if (G.best > 0 && G.score > G.best && !G.recordShown) {
@@ -1405,9 +1441,20 @@ function endGame() {
   show('recordBadge', (rec && G.score > 0) || near);
   $('overMode').textContent = daily ? `${tr('Günlük çay')} · ${tr(G.mod.name)} · ${tr('Seri')} ${dailyStreak()}` : '';
   show('overMode', daily);
+  if (G.mode === 'challenge') {
+    // meydan okumada rozet hedefi anlatır, kişisel rekor ikinci planda
+    const won = G.score > G.ch.target, prize = won ? chReward() : 0;
+    if (won) G.ch.done = true;
+    $('recordBadge').textContent = won ? tr('Meydan okumayı kazandın!') + (prize ? ` +${prize}` : '') : `${tr('Hedefe')} ${G.ch.target + 1 - G.score} ${tr('puan kaldı!')}`;
+    $('recordBadge').classList.toggle('near', !won); show('recordBadge', true);
+    $('overMode').textContent = `${tr('Meydan okuma')} · ${tr('Hedef')} ${G.ch.target}`; show('overMode', true);
+    if (won) rec = true;
+  }
+  $('chLbl').textContent = tr(G.mode === 'challenge' && G.score > G.ch.target ? 'Rövanşa çağır' : 'Arkadaşına meydan oku');
+  show('chBtn', chShareable());
   overUnlock();
   // ikinci şans: koşu başına bir kez, yalnızca iyi giden bir koşuda (her ölümde değil)
-  const canRevive = !daily && !G.revived && G.pieces.length > 0 && G.score >= 10 && G.score >= G.prevBest * .5 && rewardReady();
+  const canRevive = G.mode === 'classic' && !G.revived && G.pieces.length > 0 && G.score >= 10 && G.score >= G.prevBest * .5 && rewardReady();
   $('reviveLbl').textContent = tr(window.PF ? 'Reklam izle, devam et' : 'İkinci şans');
   $('reviveBtn').disabled = false;
   show('reviveBtn', canRevive); show('reviveNote', false);
@@ -1482,6 +1529,9 @@ function refreshTitle() {
   if (best) sub += ` · ${tr('Bugün')} ${best}`;
   if (streak) sub += ` · ${tr('Seri')} ${streak}`;
   $('dailySub').textContent = sub;
+  show('titleBest', !G.ch); show('chChip', !!G.ch);
+  if (G.ch) $('chTarget').textContent = G.ch.target;
+  $('ctaTxt').textContent = tr(G.ch ? 'Meydan okumayı kabul et' : 'Başlamak için dokun');
   const fresh = SKINS.some((s, i) => i > 0 && skinOpen(i) && store.get('ck_seen' + i, '0') !== '1')
     || VENUES.some((v, i) => i > 0 && venueOpen(i) && store.get('ck_vseen' + i, '0') !== '1');
   $('cupsBtn').classList.toggle('dot', fresh);
@@ -1858,8 +1908,9 @@ function nextToast() {
   setTimeout(nextToast, 2400);
 }
 function share() {
-  const url = 'https://ardazeybek-dev.github.io/tea-tower/';
-  const text = `${tr('Çay Kulesi')}: ${G.score} ${tr('puanlık kule diktim!')} 🍵`;
+  const ch = chShareable(), url = ch ? chLink(G.seed, G.score) : CH_URL;
+  const text = ch ? `${tr('Çay Kulesi')}: ${G.score} ${tr('puan yaptım. Aynı bardaklarla beni geçebilir misin?')} 🍵`
+    : `${tr('Çay Kulesi')}: ${G.score} ${tr('puanlık kule diktim!')} 🍵`;
   try {
     if (navigator.share) { navigator.share({ title: tr('Çay Kulesi'), text, url }).catch(() => {}); return; }
     navigator.clipboard.writeText(text + ' ' + url).then(() => toast(tr('Kopyalandı')), () => {});
@@ -2423,6 +2474,11 @@ function render() {
 function show(id, on) { const el = $(id); if (el) el.classList.toggle('hidden', !on); }
 const ui = {
   score(v, bump) { const el = $('score'); el.textContent = v; if (bump) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); setTimeout(() => el.classList.remove('bump'), 160); } },
+  target() {
+    const el = $('target'), on = G.mode === 'challenge';
+    el.classList.toggle('hidden', !on); el.classList.toggle('won', on && G.chBeat);
+    if (on) el.textContent = G.chBeat ? `✓ ${tr('Hedef')} ${G.ch.target}` : `${tr('Hedef')} ${G.ch.target}`;
+  },
   combo(txt) { const el = $('combo'); if (txt) { el.textContent = txt; el.classList.add('show'); } else el.classList.remove('show'); },
   wallet(gain) {
     document.querySelectorAll('.walletN').forEach((el) => { el.textContent = Wallet.n; });
@@ -2441,6 +2497,7 @@ function resume() {
 function goHome() {
   PF.gameplayStop();
   show('pause', false); show('over', false); show('hud', false); show('tutorial', false);
+  if (G.ch && G.ch.done) { G.ch = null; G.mode = 'classic'; }
   G.state = 'title'; G.phaseFrom = G.phase; demoTower(); G.phaseFrom = 0; G.phaseT = 1;
   $('titleBest').querySelector('b').textContent = G.best;
   refreshTitle(); flushToasts(); syncInstall();
@@ -2497,6 +2554,8 @@ for (const id of ['cupsClose', 'giftClose', 'achClose', 'setClose']) $(id).addEv
 $('claimBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); claimGift(); });
 $('spinBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askSpin(); });
 $('shareBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
+$('chBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
+$('chX').addEventListener('click', (e) => { e.stopPropagation(); Snd.click(); G.ch = null; G.mode = 'classic'; refreshTitle(); });
 for (const id of ['installBtn', 'installBtnO']) $(id).addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); askInstall(); });
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
@@ -2552,7 +2611,7 @@ window.__game = {
   setTotal(n) { G.total = n; store.set('ck_total', n); }, selectSkin, revive: () => askRevive(), openCups, closeCups,
   get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
-  get offerRevive() { return G.offerRevive; }, get week() { return week(); }, get bestH0() { return G.bestH0; },
+  get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
   start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR,
   setTimeScale(s) { G.timeScale = s; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
@@ -2575,10 +2634,11 @@ $('titleBest').querySelector('b').textContent = G.best;
 // eski kayıtlı oyuncular: bu sürümden önceki rekorlar başarımlara sayılsın
 ST.bestScore = Math.max(ST.bestScore, G.best); ST.dailyBest = Math.max(ST.dailyBest, dailyStreak());
 saveStats(); checkAch();
+G.ch = readChallenge(); if (G.ch) G.mode = 'challenge';
 refreshTitle();
 demoTower();
-// günün ilk açılışında hediye paneli kendiliğinden gelsin
-if (!loginState().claimed) setTimeout(() => openPanel('gift'), 700);
+// günün ilk açılışında hediye paneli kendiliğinden gelsin (meydan okuma linkiyle gelen önce onu görsün)
+if (!loginState().claimed && !G.ch) setTimeout(() => openPanel('gift'), 700);
 G.cam.y = G.cam.ty = camMinY() - H * .07 / S; G.cam.x = 0;
 requestAnimationFrame(frame);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {});
