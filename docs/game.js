@@ -1489,6 +1489,7 @@ function endGame() {
   }
   $('chLbl').textContent = tr(G.mode === 'challenge' && G.score > G.ch.target ? 'Rövanşa çağır' : 'Arkadaşına meydan oku');
   show('chBtn', chShareable());
+  prepCard();
   renderBoosts();
   overUnlock();
   // ikinci şans: koşu başına bir kez, yalnızca iyi giden bir koşuda (her ölümde değil)
@@ -1965,12 +1966,75 @@ function nextToast() {
   show('toast', false); void el.offsetWidth; show('toast', true);
   setTimeout(nextToast, 2400);
 }
+// paylaşım kartı: o anki vaktin göğü ve ufku, devrilmeden önceki dimdik kule, büyük skor (1080x1350)
+function shareCard() {
+  const CW = 1080, CH = 1350, c = mk(CW, CH), g = c.getContext('2d'), P = PHASES[G.phase], u = CW / 390;
+  let gr = g.createLinearGradient(0, 0, 0, CH);
+  gr.addColorStop(0, rgb(P.skyTop)); gr.addColorStop(.42, rgb(P.skyMid)); gr.addColorStop(.72, rgb(P.skyBot)); gr.addColorStop(1, rgb(P.skyBot));
+  g.fillStyle = gr; g.fillRect(0, 0, CW, CH);
+  const sx = P.sx * CW, sy = P.sy * CH * .85, sr = P.sr * u;
+  g.globalCompositeOperation = 'lighter'; g.globalAlpha = .55; g.drawImage(tinted(SPR.softM, P.glow), sx - sr * 6, sy - sr * 6, sr * 12, sr * 12);
+  g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  g.fillStyle = rgb(P.sun); g.beginPath(); g.arc(sx, sy, sr, 0, TAU); g.fill();
+  // ufuk tuvali ekranın birimiyle (S*DPR) çizilmiş; kartın birimine ölçekle
+  const o = horizonFor(G.phase), k0 = u / (S * DPR), hw = o.c.width * k0, hh = o.c.height * k0, ty = CH * .62 - BG.bh * k0 + 2;
+  g.drawImage(o.c, (CW - hw) / 2, ty, hw, hh);
+  if (ty + hh < CH) { g.fillStyle = rgb(o.low); g.fillRect(0, ty + hh - 1, CW, CH - ty - hh + 1); }
+  // kule: ayakta kalanlar + devrilen grup, hepsi dik
+  const list = G.pieces.map((p) => p.x).concat(G.topple ? G.topple.group.map((p) => p.tx) : []);
+  const all = G.pieces.concat(G.topple ? G.topple.group : []), n = all.length;
+  let lo = 0, hi = 0; for (const x of list) { lo = Math.min(lo, x); hi = Math.max(hi, x); }
+  const by = CH * .87, top = 460;
+  const k = Math.min(2.6, (by - top) / (n * PH + 40), CW * .8 / (hi - lo + 160));
+  const ds = (sp, x, y) => g.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h);
+  g.setTransform(k, 0, 0, k, CW / 2 - (lo + hi) / 2 * k, by);
+  ds(SPR.tray, 0, 0);
+  all.forEach((p, i) => {
+    const x = list[i], y = -i * PH;
+    ds(SPR.contact, x, y - 1); ds(p.golden ? SPR.saucerGold : SPR.saucer, x, y); ds(p.golden ? SPR.glassGold : SPR.glass[p.tea], x, y - LIFT);
+  });
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = 'multiply'; g.drawImage(gradeOverlay(P.grade), 0, 0, CW, CH); g.globalCompositeOperation = 'source-over';
+  // yazılar okunsun diye üstte ve altta koyu perde
+  gr = g.createLinearGradient(0, 0, 0, 470); gr.addColorStop(0, 'rgba(20,10,8,0.55)'); gr.addColorStop(1, 'rgba(20,10,8,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, CW, 470);
+  gr = g.createLinearGradient(0, CH - 260, 0, CH); gr.addColorStop(0, 'rgba(20,10,8,0)'); gr.addColorStop(1, 'rgba(20,10,8,0.7)');
+  g.fillStyle = gr; g.fillRect(0, CH - 260, CW, 260);
+  g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillStyle = '#fff6e6';
+  g.shadowColor = 'rgba(0,0,0,0.45)'; g.shadowBlur = 18; g.shadowOffsetY = 4;
+  g.font = '800 44px Nunito, sans-serif'; g.fillText(tr('Çay Kulesi').toLocaleUpperCase('tr'), CW / 2, 110);
+  g.font = '800 250px Fraunces, Georgia, serif'; g.fillText(String(G.score), CW / 2, 340);
+  g.font = '700 46px Nunito, sans-serif'; g.fillText(tr('puan'), CW / 2, 405);
+  const line = chShareable() ? tr('Aynı bardaklarla beni geç') : G.mode === 'daily' ? `${tr('Günlük çay')} · ${tr(G.mod.name)}` : tr('Kulemi geçebilir misin?');
+  g.font = 'italic 600 54px Fraunces, Georgia, serif'; g.fillText(line, CW / 2, CH - 120);
+  g.font = '700 34px Nunito, sans-serif'; g.globalAlpha = .85; g.fillText(CH_URL.replace(/^https:\/\//, '').replace(/\/$/, ''), CW / 2, CH - 62);
+  return c;
+}
+// paylaş dokunuşunda hazır olsun: bazı tarayıcılar dokunuştan sonraki beklemede paylaşımı reddediyor
+let cardTok = 0;
+function prepCard() {
+  G.card = null;
+  if (window.PF || !navigator.canShare || !window.File) return;
+  const tok = ++cardTok;
+  // bitiş animasyonu takılmasın: çizimi biraz sonraya bırak
+  setTimeout(() => {
+    if (tok !== cardTok || G.state !== 'over') return;
+    try {
+      shareCard().toBlob((b) => {
+        if (!b || tok !== cardTok) return;
+        const f = new File([b], `cay-kulesi-${G.score}.jpg`, { type: 'image/jpeg' });
+        if (navigator.canShare({ files: [f] })) G.card = f;
+      }, 'image/jpeg', .9);
+    } catch (e) {}
+  }, 350);
+}
 function share() {
   const ch = chShareable(), url = ch ? chLink(G.seed, G.score) : CH_URL;
   if (ch) { const m = seedList('ck_chmine'), k = G.seed.toString(36); if (!m.includes(k)) { m.push(k); store.set('ck_chmine', m.slice(-40).join(',')); } }
   const text = ch ? `${tr('Çay Kulesi')}: ${G.score} ${tr('puan yaptım. Aynı bardaklarla beni geçebilir misin?')} 🍵`
     : `${tr('Çay Kulesi')}: ${G.score} ${tr('puanlık kule diktim!')} 🍵`;
   try {
+    if (G.card && navigator.share) { navigator.share({ files: [G.card], title: tr('Çay Kulesi'), text: text + ' ' + url }).catch(() => {}); return; }
     if (navigator.share) { navigator.share({ title: tr('Çay Kulesi'), text, url }).catch(() => {}); return; }
     navigator.clipboard.writeText(text + ' ' + url).then(() => toast(tr('Kopyalandı')), () => {});
   } catch (e) {}
@@ -2679,7 +2743,7 @@ window.__game = {
   get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
   get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get xp() { return { ...lvOf(XP.n), n: XP.n, paid: XP.paid, rank: rankOf(lvOf(XP.n).l) }; }, get boost() { return { ...G.boost }; }, get boostSel() { return [...G.boostSel]; }, toggleBoost: (k) => toggleBoost(k, $('boostRow')), get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
-  start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR,
+  start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR, shareCard, get card() { return G.card; },
   setTimeScale(s) { G.timeScale = s; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
   // tam ortada bırakmak için askıyı ortaya kadar ilerlet
