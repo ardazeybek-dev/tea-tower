@@ -33,7 +33,10 @@
 
 <div id="title" class="screen">
   <div class="top-row">
-    <div class="wallet" aria-label="Şeker"><svg><use href="#i-sugar"/></svg><b class="walletN">0</b></div>
+    <div class="top-l">
+      <div class="wallet" aria-label="Şeker"><svg><use href="#i-sugar"/></svg><b class="walletN">0</b></div>
+      <button class="rank" id="rank"><b id="rankLv">1</b><span id="rankName">Çırak</span></button>
+    </div>
     <div class="top-btns">
       <button id="installBtn" class="icon-btn install hidden" aria-label="Ana ekrana ekle">
         <svg viewBox="0 0 24 24"><path class="w" d="M12 4v10M7.5 9.5L12 14l4.5-4.5M5 17v1.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>
@@ -155,7 +158,7 @@
       </div>
     </div>
     <div class="ov-b">
-      <div class="earn" id="earnNote"><svg><use href="#i-sugar"/></svg><b id="earnN">+0</b> <span>şeker</span></div>
+      <div class="earn" id="earnNote"><svg><use href="#i-sugar"/></svg><b id="earnN">+0</b> <span>şeker</span> <span class="xp" id="earnXp"></span></div>
       <div class="unlock hidden" id="unlockNote"></div>
       <div class="boosts hidden" id="boosts"><div class="boost-h">Sonraki ele güç kat</div><div class="boost-row" id="boostRow"></div></div>
       <button id="reviveBtn" class="btn primary hidden"><svg class="ad-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5.5" width="14" height="13" rx="3"/><path d="M17.5 10.2l4-2.4v8.4l-4-2.4z"/></svg><span id="reviveLbl">İkinci şans</span></button>

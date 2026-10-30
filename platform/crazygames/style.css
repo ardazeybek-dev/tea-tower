@@ -314,3 +314,14 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .boost-row button.poor{opacity:.45}
 @media (max-height:700px){.boost-row small{display:none}.boost-row button{padding:6px 4px}}
 @media (max-height:760px){#over.offer .boosts{display:none}}
+/* çaycı rütbesi: başlıkta seviye rozeti, ilerleme numaranın etrafında halka */
+.top-l{display:flex;align-items:center;gap:8px;min-width:0}
+.rank{display:flex;align-items:center;gap:7px;height:44px;padding:0 4px;border-radius:99px;background:var(--glass);border:1px solid var(--line);color:inherit;min-width:44px}
+.rank b{--p:0%;flex:none;display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:3px solid transparent;font-family:"Fraunces",serif;font-size:15px;color:#3a2208;
+  background:radial-gradient(circle at 35% 30%,#ffe9a8,#e0a83a) padding-box,conic-gradient(#fff3cf var(--p),rgba(255,255,255,.18) 0) border-box}
+.rank span{font-size:13px;font-weight:800;white-space:nowrap;padding-right:8px}
+.rank:active{transform:scale(.95)}
+.earn .xp{color:#a8321c;font-weight:900}
+@media (max-width:399px){.rank span{display:none}}
+@media (max-width:380px){.gift-panel>.eyebrow,.cups-panel>.eyebrow{margin-top:30px}}
+@media (max-width:380px) and (max-height:760px){.mode-btn b{font-size:12px;white-space:nowrap}}

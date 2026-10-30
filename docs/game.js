@@ -1094,6 +1094,27 @@ const Wallet = {
   add(k) { this.n += k; store.set('ck_sugar', this.n); ui.wallet(true); },
   spend(k) { if (this.n < k) return false; this.n -= k; store.set('ck_sugar', this.n); ui.wallet(false); return true; },
 };
+// çaycı rütbesi: her bardak 1, mükemmel +1 tecrübe; her seviyede şeker, yeni unvanda fazlası
+const RANKS = [[1, 'Çırak'], [3, 'Ocakçı'], [6, 'Demci'], [10, 'Kalfa'], [15, 'Usta'], [20, 'Çaycıbaşı'], [30, 'Semaver ustası'], [40, 'Çay efendisi'], [60, 'Boğaz efsanesi']];
+const xpNeed = (l) => 40 + l * 20;
+function lvOf(x) { let l = 1; while (x >= xpNeed(l)) { x -= xpNeed(l); l++; } return { l, x, need: xpNeed(l) }; }
+function rankOf(l) { let n = RANKS[0][1]; for (const [m, k] of RANKS) if (l >= m) n = k; return n; }
+const XP = { n: parseInt(store.get('ck_xp', '-1'), 10), paid: parseInt(store.get('ck_lv', '0'), 10) || 0 };
+// bu sürümden önce oynayanlar: tecrübe toplam bardaktan başlar, geçmiş seviyeler için ödül verilmez
+if (!(XP.n >= 0)) { XP.n = G.total; store.set('ck_xp', XP.n); }
+if (!XP.paid) { XP.paid = lvOf(XP.n).l; store.set('ck_lv', XP.paid); }
+function addXp(k) {
+  XP.n += k; G.runXp += k; store.set('ck_xp', XP.n);
+  const L = lvOf(XP.n).l;
+  while (XP.paid < L) {
+    XP.paid++;
+    const fresh = rankOf(XP.paid) !== rankOf(XP.paid - 1), r = Math.min(100, 15 + XP.paid * 5) + (fresh ? 50 : 0);
+    G.runSugar += r; Wallet.add(r);
+    toast(`${tr('Seviye')} ${XP.paid}${fresh ? ' · ' + tr(rankOf(XP.paid)) : ''} <em>+${r}</em>`);
+    if (G.state === 'playing') floater(topX(), topY() + 280, `${tr('Seviye')} ${XP.paid}!`, '#ffe08a', 24, true);
+  }
+  store.set('ck_lv', XP.paid);
+}
 let rng = Math.random;   // oyun akışı rastgeleliği (günlük modda tohumlu)
 
 // ------------------------------------------------------------------ günlük çay
@@ -1246,7 +1267,7 @@ function resetWorld() {
   G.pieces.length = 0; G.bodies.length = 0; parts.length = 0; rings.length = 0; floaters.length = 0;
   G.drop = null; G.topple = null; G.score = 0; G.combo = 0; G.maxCombo = 0; G.perfects = 0; G.risk = 0; G.warned = false; G.recordShown = false;
   G.lastGolden = false; G.revived = false; G.offerRevive = false; G.runSugar = 0;
-  G.recCrossed = false; G.recT = 0; G.mile = 0; G.chBeat = false; G.boost = {}; G.boosted = false;
+  G.recCrossed = false; G.recT = 0; G.mile = 0; G.chBeat = false; G.boost = {}; G.boosted = false; G.runXp = 0;
 }
 function demoTower() {
   resetWorld();
@@ -1330,7 +1351,7 @@ function land() {
   if (gain > 1) floater(piece.tx + 74, ty + PH - 10, `+${gain}`, '#ffffff', 20, true);
   // şeker: her bardak 1, mükemmel +1, yaldızlı +2; anında cüzdana (sekme kapansa da kaybolmaz)
   const sg = 1 + (perfect ? 1 : 0) + (d.spec.golden ? 2 : 0);
-  G.runSugar += sg; Wallet.add(sg);
+  G.runSugar += sg; Wallet.add(sg); addXp(perfect ? 2 : 1);
   if (d.spec.golden) { ST.gold++; misEvent('gold', 1); }
   misEvent('glass', 1); if (perfect) misEvent('perfect', 1);
   misEvent('height', G.pieces.length); misEvent('combo', G.combo);
@@ -1476,7 +1497,7 @@ function endGame() {
   show('reviveBtn', canRevive); show('reviveNote', false);
   setOffer(canRevive);
   if (canRevive && window.PF && window.PF.offerReward) window.PF.offerReward();
-  $('earnN').textContent = '+' + G.runSugar;
+  $('earnN').textContent = '+' + G.runSugar; $('earnXp').textContent = G.runXp ? `· +${G.runXp} XP` : '';
   checkAch(); flushToasts();
   $('titleBest').querySelector('b').textContent = G.best;
   refreshTitle();
@@ -1578,7 +1599,7 @@ function refreshTitle() {
   const md = missions().list.filter((m) => m.done).length;
   $('achSub').textContent = `${tr('Bugün')} ${md}/3`;
   $('achBtn').classList.toggle('dot', md < 3 && store.get('ck_misSeen', '') !== dayKey());
-  ui.wallet(false);
+  ui.wallet(false); ui.rank();
 }
 // paneller (koleksiyon, hediye, başarımlar): açıkken oyun dokunuşu kapalı
 // ayarlar moladan da açılır; mola ekranı arkada saklanır, kapanınca geri gelir
@@ -2510,6 +2531,12 @@ function render() {
 function show(id, on) { const el = $(id); if (el) el.classList.toggle('hidden', !on); }
 const ui = {
   score(v, bump) { const el = $('score'); el.textContent = v; if (bump) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); setTimeout(() => el.classList.remove('bump'), 160); } },
+  rank() {
+    const v = lvOf(XP.n);
+    $('rankLv').textContent = v.l; $('rankName').textContent = tr(rankOf(v.l));
+    $('rankLv').style.setProperty('--p', (v.x / v.need * 100).toFixed(1) + '%');
+    $('rank').setAttribute('aria-label', `${tr('Seviye')} ${v.l} · ${tr(rankOf(v.l))} · ${v.x}/${v.need} XP`);
+  },
   target() {
     const el = $('target'), on = G.mode === 'challenge';
     el.classList.toggle('hidden', !on); el.classList.toggle('won', on && G.chBeat);
@@ -2584,6 +2611,11 @@ for (const id of ['cupsClose', 'giftClose', 'achClose', 'setClose']) $(id).addEv
 $('claimBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); claimGift(); });
 $('spinBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askSpin(); });
 $('shareBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
+$('rank').addEventListener('click', (e) => {
+  e.stopPropagation(); Snd.init(); Snd.click();
+  const v = lvOf(XP.n);
+  toast(`${tr(rankOf(v.l))} · ${tr('Seviye')} ${v.l} · <em>${v.need - v.x} XP</em> ${tr('kaldı')}`);
+});
 $('boostRow').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; e.stopPropagation(); Snd.init(); toggleBoost(b.dataset.k, b); });
 $('chBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
 $('chX').addEventListener('click', (e) => { e.stopPropagation(); Snd.click(); G.ch = null; G.mode = 'classic'; refreshTitle(); });
@@ -2642,7 +2674,7 @@ window.__game = {
   setTotal(n) { G.total = n; store.set('ck_total', n); }, selectSkin, revive: () => askRevive(), openCups, closeCups,
   get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
-  get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get boost() { return { ...G.boost }; }, get boostSel() { return [...G.boostSel]; }, toggleBoost: (k) => toggleBoost(k, $('boostRow')), get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
+  get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get xp() { return { ...lvOf(XP.n), n: XP.n, paid: XP.paid, rank: rankOf(lvOf(XP.n).l) }; }, get boost() { return { ...G.boost }; }, get boostSel() { return [...G.boostSel]; }, toggleBoost: (k) => toggleBoost(k, $('boostRow')), get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
   start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR,
   setTimeScale(s) { G.timeScale = s; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
