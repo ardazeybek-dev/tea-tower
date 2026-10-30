@@ -441,6 +441,7 @@ function buildSprites() {
   SPR.spark = makeSpark();
   SPR.softM = { c: SPR.soft };
   SPR.mistM = { c: SPR.soft };
+  SPR.pathM = { c: SPR.soft };
   SPR.contact = sprite(90, 20, 45, 10, (g) => softEllipse(g, 0, 0, 40, 6.5, [40, 14, 6], .42));
   SPR.kilimPattern = ctx.createPattern(SPR.tile.c, 'repeat');
   // camda gökyüzü yansıması: her karede o anki gök rengiyle boyanır
@@ -882,6 +883,12 @@ function composeHorizon(o, layers, bh, P, V, u, T, E, vw, lite) {
     low = sea ? vtint(P.seaDeep, [sea[1], sea[2]], nt) : P.seaDeep;
     gr = g.createLinearGradient(0, bh, 0, H2); gr.addColorStop(0, rgb(top)); gr.addColorStop(1, rgb(low));
     g.fillStyle = gr; g.fillRect(0, bh, bw, sh);
+    gr = g.createLinearGradient(0, bh, 0, bh + sh * .4);
+    gr.addColorStop(0, rgb(mixc(P.skyBot, hz, .3), .6 * (1 - nt * .3))); gr.addColorStop(.35, rgb(mixc(P.skyBot, P.skyMid, .4), .22)); gr.addColorStop(1, rgb(P.skyMid, 0));
+    g.fillStyle = gr; g.fillRect(0, bh, bw, sh * .4);
+    gr = g.createLinearGradient(0, bh, 0, bh + 10 * u);
+    gr.addColorStop(0, rgb(hz, .45 * (1 - nt * .4))); gr.addColorStop(1, rgb(hz, 0));
+    g.fillStyle = gr; g.fillRect(0, bh, bw, 10 * u);
     // yansıma: karanın ters, basık, dalgayla kırılmış şeritleri
     t.globalCompositeOperation = 'copy'; t.drawImage(o.c, 0, 0, bw, bh, 0, 0, bw, bh); t.globalCompositeOperation = 'source-over';
     const sq = .5, hs = Math.max(2, (lite ? 4 : 2.2) * u), n = Math.ceil(70 * u * sq / hs);
@@ -896,7 +903,7 @@ function composeHorizon(o, layers, bh, P, V, u, T, E, vw, lite) {
     const lc = mixc(P.skyBot, P.shimmer, .3), dc = mixc(low, [0, 0, 0], .25);
     for (let k = 0; k < 46; k++) {
       const f = k / 46, y = bh + 1 + Math.pow(f, 1.9) * sh, th = (.4 + f * 1.8) * u * .7;
-      g.fillStyle = rgb(k % 2 ? lc : dc, (k % 2 ? .1 : .08) * (1 - f * .3));
+      g.fillStyle = rgb(k % 2 ? lc : dc, (k % 2 ? .1 : .08) * (1 - f * .3) * (.25 + .75 * Math.min(1, f * 4)));
       for (let x = -rnd() * 30 * u; x < bw;) { const len = (10 + rnd() * 60) * u * (.4 + f); g.fillRect(x, y + (rnd() - .5) * th * 2, len, th); x += len + (14 + rnd() * 70) * u * (.4 + f); }
     }
   } else {
@@ -2415,14 +2422,32 @@ function drawBackground(P) {
     const hz = hazeOf(P);
     if (V.water) {
       // güneş/ay yolu: ufka yakın ince ve sık, yakında geniş; yavaş kıpırdar
-      const shs = eco() ? 2 : 1;
+      const shs = eco() ? 2 : 1, pl = H * .32, pw = sr * 3.2;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = .3 * (1 - P.night * .35);
+      ctx.drawImage(tinted(SPR.pathM, P.shimmer), sx - pw / 2, hy - pl * .12, pw, pl * 1.1);
+      ctx.globalAlpha = .4 * (1 - P.night * .35);
+      ctx.drawImage(SUNL.c || SPR.soft, sx - pw * .9, hy - sr * .8, pw * 1.8, sr * 1.6);
+      ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       for (let i = 0; i < 46; i += shs) {
-        const yy = hy + 3 + Math.pow(i / 46, 1.7) * H * .32;
-        const spread = 10 + i * 1.9;
+        const yy = hy + 3 + Math.pow(i / 46, 1.7) * pl;
+        const spread = 6 + i * 1.6;
         const xx = sx + Math.sin(i * 12.9 + G.t * (.35 + (i % 5) * .12)) * spread;
-        const a = (.3 + .4 * Math.sin(G.t * 1.1 + i * 1.7)) * (1 - i / 46) * (1 - P.night * .25);
-        ctx.fillStyle = rgb(P.shimmer, Math.max(0, a));
-        ctx.fillRect(xx - (4 + i * .7) / 2, yy, 4 + i * .7, .8 + i * .025);
+        const a = (.35 + .45 * Math.sin(G.t * 1.1 + i * 1.7)) * (1 - i / 46) * (1 - P.night * .25);
+        ctx.fillStyle = rgb(mixc(P.shimmer, [255, 255, 255], .4), Math.max(0, a));
+        ctx.fillRect(xx - (3 + i * .55) / 2, yy, 3 + i * .55, .6 + i * .02);
+      }
+      // ufukta puslu gemi siluetleri: çok yavaş süzülür
+      const shc = rgb(mixc(mixc(P.city, P.seaDeep, .3), hz, .55), .85), ss = S * .9;
+      ctx.fillStyle = shc;
+      for (let k = 0; k < 2; k++) {
+        const span = W + 80 * ss, xs = ((G.t * (2.2 + k * 1.3) * ss + k * span * .55 + 40) % span) - 40 * ss + hx * .9, yb2 = hy + (2.5 + k * 1.6) * S, L = (k ? 22 : 30) * ss;
+        if (k) ctx.globalAlpha = .7;
+        ctx.beginPath(); ctx.moveTo(xs, yb2 - 2.4 * ss); ctx.lineTo(xs + L, yb2 - 2.4 * ss); ctx.lineTo(xs + L - 2.5 * ss, yb2); ctx.lineTo(xs + 1.5 * ss, yb2); ctx.fill();
+        ctx.fillRect(xs + L * .55, yb2 - 5.4 * ss, L * .3, 3 * ss);
+        ctx.fillRect(xs + L * .64, yb2 - 8.2 * ss, 2 * ss, 2.8 * ss);
+        if (k === 0) { ctx.fillRect(xs + L * .18, yb2 - 4.4 * ss, L * .22, 2 * ss); ctx.fillRect(xs + L * .3, yb2 - 9 * ss, .7 * ss, 4.6 * ss); }
+        ctx.globalAlpha = 1;
       }
     }
     // kız kulesi ve suya yansıması
