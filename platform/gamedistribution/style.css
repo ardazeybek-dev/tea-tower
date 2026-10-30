@@ -300,3 +300,17 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .btn.ch-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;border:1.5px solid rgba(168,50,28,.35);border-radius:16px;padding:10px}
 .btn.ch-btn svg{width:18px;height:18px;fill:none;stroke:#a8321c;stroke-width:2.2;stroke-linecap:round}
 .pf-ads .ch-btn,.pf-ads .ch-chip{display:none}
+/* güçlendiriciler: bitişte bir sonraki ele seçilir */
+.boosts{margin:0 0 10px}
+.boost-h{font-size:11px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#a8321c;opacity:.75;margin-bottom:6px}
+.boost-row{display:flex;gap:6px}
+.boost-row button{flex:1 1 0;min-width:0;min-height:44px;padding:7px 4px 6px;border-radius:14px;background:rgba(120,60,30,.07);border:1.5px solid rgba(120,60,30,.12);color:#5a1c12;display:flex;flex-direction:column;align-items:center;gap:1px;transition:transform .12s,background .15s}
+.boost-row button:active{transform:scale(.95)}
+.boost-row b{font-size:13px;font-weight:900;white-space:nowrap}
+.boost-row small{font-size:10px;font-weight:700;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.boost-row span{display:flex;align-items:center;gap:3px;font-family:"Fraunces",serif;font-weight:700;font-size:13px;color:#7a3a28}
+.boost-row svg{width:13px;height:13px}
+.boost-row button[aria-pressed="true"]{background:linear-gradient(180deg,#ffe9a8,#f4c95d);border-color:#d9a03a;box-shadow:0 4px 12px rgba(200,140,40,.3)}
+.boost-row button.poor{opacity:.45}
+@media (max-height:700px){.boost-row small{display:none}.boost-row button{padding:6px 4px}}
+@media (max-height:760px){#over.offer .boosts{display:none}}

@@ -68,6 +68,12 @@ const SKINS = [
 // günlük çark dilimleri (v: şeker, w: ağırlık) ve 7 günlük giriş serisi
 const WHEEL = [{ v: 10, w: 20 }, { v: 25, w: 13 }, { v: 15, w: 18 }, { v: 50, w: 7 }, { v: 20, w: 16 }, { v: 35, w: 10 }, { v: 12, w: 14 }, { v: 150, w: 2 }];
 const GIFT = [20, 30, 40, 60, 80, 100, 150];
+// güçlendiriciler: bir sonraki ele şekerle alınır; günlük çayda ve meydan okumada kapalı (adil kalsın)
+const BOOSTS = [
+  { k: 'calm', name: 'Sakin askı', note: 'İlk 15 bardak yavaş', cost: 20 },
+  { k: 'spare', name: 'Yedek tabak', note: 'Bir devrilmeyi kurtarır', cost: 35 },
+  { k: 'gold', name: 'Altın saat', note: 'Yaldızlı bardak ×2', cost: 20 },
+];
 // günlük çay: her gün herkes için aynı kural + aynı bardak dizisi
 const DAILY = [
   { name: 'Rüzgârlı Boğaz', drift: 1 },
@@ -1069,7 +1075,7 @@ const G = {
   cam: { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 }, shake: 0, flash: 0,
   phase: 0, phaseFrom: 0, phaseT: 1, overAt: 0, spawnIn: 0, lastGolden: false,
   tutorial: store.get('ck_tut', '0') !== '1', tutDone: 0,
-  mode: 'classic', mod: null, ph0: 0, seed: 1, ch: null, revived: false, panel: null, offerRevive: false, runSugar: 0,
+  mode: 'classic', mod: null, ph0: 0, seed: 1, ch: null, boost: {}, boostSel: new Set(), boosted: false, revived: false, panel: null, offerRevive: false, runSugar: 0,
   total: parseInt(store.get('ck_total', '0'), 10) || 0, skin: parseInt(store.get('ck_skin', '0'), 10) || 0,
   venue: parseInt(store.get('ck_venue', '0'), 10) || 0,
 };
@@ -1201,7 +1207,7 @@ function chReward() {
   return CH_PRIZE;
 }
 // paylaşılan skor ancak adil bir koşudan çıkarsa meydan okumaya dönüşür
-const chShareable = () => !window.PF && G.mode !== 'daily' && !G.revived && G.score >= 5;
+const chShareable = () => !window.PF && G.mode !== 'daily' && !G.revived && !G.boosted && G.score >= 5;
 const parts = [], rings = [], floaters = [];
 // gün batımı/şafak huzmesindeki tozlar: huzme boyunca (v) ve enine (w) konum
 const motes = Array.from({ length: 30 }, () => ({ v: Math.random(), w: Math.random() * 2 - 1, s: rand(.6, 1.4), ph: rand(0, TAU), sp: rand(.5, 1.3) }));
@@ -1217,14 +1223,14 @@ function newPieceSpec() {
   const n = G.pieces.length;
   let golden = false;
   const gr = rng(), r = rng();
-  if (n >= 3 && !G.lastGolden && gr < ((G.mod && G.mod.gold) || .15)) golden = true;
+  if (n >= 3 && !G.lastGolden && gr < ((G.mod && G.mod.gold) || (G.boost.gold ? .3 : .15))) golden = true;
   G.lastGolden = golden;
   return { tea: r < .2 ? 0 : r < .62 ? 1 : r < .88 ? 2 : 3, golden };
 }
 function swingParams(n) {
   const m = G.mod || {};
   const Ah = Math.min(152, 100 + n * 2.4) * (m.A || 1);
-  const T = Math.max(1.12, 2.6 - n * .052) * (m.T || 1);
+  const T = Math.max(1.12, 2.6 - n * .052) * (m.T || 1) * (G.boost.calm && n < 15 ? 1.3 : 1);
   return { A: Math.asin(Ah / L), T };
 }
 function spawnHang() {
@@ -1242,7 +1248,7 @@ function resetWorld() {
   G.pieces.length = 0; G.bodies.length = 0; parts.length = 0; rings.length = 0; floaters.length = 0;
   G.drop = null; G.topple = null; G.score = 0; G.combo = 0; G.maxCombo = 0; G.perfects = 0; G.risk = 0; G.warned = false; G.recordShown = false;
   G.lastGolden = false; G.revived = false; G.offerRevive = false; G.runSugar = 0;
-  G.recCrossed = false; G.recT = 0; G.mile = 0; G.chBeat = false;
+  G.recCrossed = false; G.recT = 0; G.mile = 0; G.chBeat = false; G.boost = {}; G.boosted = false;
 }
 function demoTower() {
   resetWorld();
@@ -1263,6 +1269,10 @@ function startGame(mode) {
   resetWorld();
   G.state = 'playing';
   G.phaseFrom = G.phase; G.phase = G.ph0; G.phaseT = G.phaseFrom === G.phase ? 1 : 0;
+  // seçilen güçlendiriciler bu elin başında ödenir, seçim tek ele geçerli
+  if (G.mode === 'classic') for (const b of BOOSTS) if (G.boostSel.has(b.k) && Wallet.spend(b.cost)) G.boost[b.k] = true;
+  G.boostSel.clear(); G.boosted = Object.keys(G.boost).length > 0;
+  if (G.boosted) floater(0, 230, BOOSTS.filter((b) => G.boost[b.k]).map((b) => tr(b.name)).join(' · '), '#ffe2a8', 22, true);
   spawnHang();
   ui.score(0, false); ui.combo(''); ui.target();
   if (G.mod) floater(0, 230, `${tr('Günlük çay')} · ${tr(G.mod.name)}`, '#ffe2a8', 22, true);
@@ -1300,7 +1310,7 @@ function land() {
   const piece = { x: tx0 + off, tx: tx0 + off, tea: d.spec.tea, golden: d.spec.golden, born: G.t };
   G.pieces.push(piece);
   const st = stability();
-  if (st.fail >= 0) { beginTopple(st.fail, st.side); return; }
+  if (st.fail >= 0) { if (G.boost.spare) spareSave(st.side); else beginTopple(st.fail, st.side); return; }
   G.total++; store.set('ck_total', G.total);
   // puan
   let gain = 1;
@@ -1365,6 +1375,16 @@ function land() {
   // öğretici
   if (G.tutorial) { G.tutDone++; if (G.tutDone >= 2) { G.tutorial = false; store.set('ck_tut', '1'); show('tutorial', false); } }
   G.spawnIn = .26;
+}
+// yedek tabak: kuleyi devirecek bardak tek başına düşer, kule ayakta kalır
+function spareSave(side) {
+  G.boost.spare = false;
+  const p = G.pieces.pop();
+  G.bodies.push({ p, x: p.tx, y: G.pieces.length * PH + 50, vx: side * 170, vy: 280, a: 0, va: side * 3, alive: true });
+  G.combo = 0; ui.combo(''); straighten(.7); G.risk = stability().risk; G.warned = false;
+  G.flash = .6; G.shake = Math.max(G.shake, 4); Snd.creak(); vibrate([20, 40, 20]);
+  floater(topX(), topY() + PH + 60, tr('Yedek tabak!'), '#ffe08a', 26, true);
+  G.spawnIn = .6;
 }
 function stability() {
   const P = G.pieces, n = P.length;
@@ -1452,6 +1472,7 @@ function endGame() {
   }
   $('chLbl').textContent = tr(G.mode === 'challenge' && G.score > G.ch.target ? 'Rövanşa çağır' : 'Arkadaşına meydan oku');
   show('chBtn', chShareable());
+  renderBoosts();
   overUnlock();
   // ikinci şans: koşu başına bir kez, yalnızca iyi giden bir koşuda (her ölümde değil)
   const canRevive = G.mode === 'classic' && !G.revived && G.pieces.length > 0 && G.score >= 10 && G.score >= G.prevBest * .5 && rewardReady();
@@ -1469,8 +1490,28 @@ function endGame() {
   if (rec && G.score > 0) { setTimeout(() => { Snd.record(); confetti(60); }, 280); if (!firstRun) PF.happy(); }
 }
 // ikinci şans sunulurken "Bir el daha" ikincil, ekrana dokunma kapalı
+function renderBoosts() {
+  const on = G.mode === 'classic';
+  show('boosts', on); if (!on) return;
+  const left = Wallet.n - BOOSTS.reduce((a, b) => a + (G.boostSel.has(b.k) ? b.cost : 0), 0);
+  $('boostRow').innerHTML = BOOSTS.map((b) => {
+    const sel = G.boostSel.has(b.k);
+    return `<button data-k="${b.k}" aria-pressed="${sel}"${!sel && b.cost > left ? ' class="poor"' : ''}><b>${tr(b.name)}</b><small>${tr(b.note)}</small><span><svg><use href="#i-sugar"/></svg>${b.cost}</span></button>`;
+  }).join('');
+}
+function toggleBoost(k, el) {
+  const b = BOOSTS.find((x) => x.k === k); if (!b || G.state !== 'over') return;
+  if (G.boostSel.has(k)) G.boostSel.delete(k);
+  else {
+    const used = BOOSTS.reduce((a, x) => a + (G.boostSel.has(x.k) ? x.cost : 0), 0);
+    if (used + b.cost > Wallet.n) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); Snd.click(); vibrate(30); return; }
+    G.boostSel.add(k);
+  }
+  Snd.click(); vibrate(8); renderBoosts();
+}
 function setOffer(on) {
   G.offerRevive = on;
+  $('over').classList.toggle('offer', on);
   $('againBtn').className = 'btn ' + (on ? 'second' : 'primary');
   show('overHint', !on);
 }
@@ -2498,6 +2539,7 @@ function goHome() {
   PF.gameplayStop();
   show('pause', false); show('over', false); show('hud', false); show('tutorial', false);
   if (G.ch && G.ch.done) { G.ch = null; G.mode = 'classic'; }
+  G.boostSel.clear();
   G.state = 'title'; G.phaseFrom = G.phase; demoTower(); G.phaseFrom = 0; G.phaseT = 1;
   $('titleBest').querySelector('b').textContent = G.best;
   refreshTitle(); flushToasts(); syncInstall();
@@ -2554,6 +2596,7 @@ for (const id of ['cupsClose', 'giftClose', 'achClose', 'setClose']) $(id).addEv
 $('claimBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); claimGift(); });
 $('spinBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askSpin(); });
 $('shareBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
+$('boostRow').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; e.stopPropagation(); Snd.init(); toggleBoost(b.dataset.k, b); });
 $('chBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
 $('chX').addEventListener('click', (e) => { e.stopPropagation(); Snd.click(); G.ch = null; G.mode = 'classic'; refreshTitle(); });
 for (const id of ['installBtn', 'installBtnO']) $(id).addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); askInstall(); });
@@ -2611,7 +2654,7 @@ window.__game = {
   setTotal(n) { G.total = n; store.set('ck_total', n); }, selectSkin, revive: () => askRevive(), openCups, closeCups,
   get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
-  get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
+  get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get boost() { return { ...G.boost }; }, get boostSel() { return [...G.boostSel]; }, toggleBoost: (k) => toggleBoost(k, $('boostRow')), get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
   start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR,
   setTimeScale(s) { G.timeScale = s; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
