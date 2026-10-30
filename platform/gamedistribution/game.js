@@ -440,6 +440,8 @@ function buildSprites() {
   SPR.soft = makeGlow([255, 255, 255]);
   SPR.warm = makeGlow([255, 196, 120]);
   SPR.spark = makeSpark();
+  SPR.sparkG = makeGlow([255, 196, 92]);
+  SPR.sparkE = makeGlow([255, 104, 46]);
   SPR.softM = { c: SPR.soft };
   SPR.mistM = { c: SPR.soft };
   SPR.pathM = { c: SPR.soft };
@@ -2730,9 +2732,18 @@ function render() {
   // parçacıklar (normal)
   for (const p of parts) {
     const t = p.life / p.max;
-    if (p.kind === 'tea' || p.kind === 'drop') { ctx.fillStyle = rgb(p.col || TEA[1], 1 - t * .6); ctx.beginPath(); ctx.arc(p.x, -p.y, p.size, 0, TAU); ctx.fill(); }
-    else if (p.kind === 'shard') { ctx.save(); ctx.translate(p.x, -p.y); ctx.rotate(p.rot); ctx.fillStyle = `rgba(235,245,255,${.8 - t * .6})`; ctx.beginPath(); ctx.moveTo(-p.size, 0); ctx.lineTo(0, -p.size * .5); ctx.lineTo(p.size * .7, p.size * .4); ctx.fill(); ctx.restore(); }
-    else if (p.kind === 'porcelain' || p.kind === 'sugar') { ctx.save(); ctx.translate(p.x, -p.y); ctx.rotate(p.rot); ctx.fillStyle = p.kind === 'sugar' ? `rgba(255,253,246,${1 - t * t})` : `rgba(246,238,226,${1 - t})`; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * (p.kind === 'sugar' ? 1 : .6)); if (p.kind === 'sugar') { ctx.fillStyle = `rgba(200,180,150,${.5 * (1 - t * t)})`; ctx.fillRect(-p.size / 2, p.size * .2, p.size, p.size * .3); } ctx.restore(); }
+    if (p.kind === 'tea' || p.kind === 'drop') {
+      const v = Math.hypot(p.vx, p.vy), st = 1 + Math.min(1.4, v * .004);
+      ctx.fillStyle = rgb(mixc(p.col || TEA[1], [40, 12, 4], t * .45), 1 - t * .7);
+      ctx.beginPath(); ctx.ellipse(p.x, -p.y, p.size * st, p.size / Math.sqrt(st), Math.atan2(-p.vy, p.vx), 0, TAU); ctx.fill();
+    }
+    else if (p.kind === 'shard') {
+      const fl = Math.cos(p.life * p.vr * .8 + p.rot), gl = Math.pow(Math.abs(fl), 6);
+      ctx.save(); ctx.translate(p.x, -p.y); ctx.rotate(p.rot); ctx.scale(.25 + .75 * Math.abs(fl), 1);
+      ctx.fillStyle = rgb(mixc([200, 222, 240], [255, 255, 255], gl), (.8 - t * .6) * (.6 + .4 * gl));
+      ctx.beginPath(); ctx.moveTo(-p.size, 0); ctx.lineTo(0, -p.size * .5); ctx.lineTo(p.size * .7, p.size * .4); ctx.fill(); ctx.restore();
+    }
+    else if (p.kind === 'porcelain' || p.kind === 'sugar') { ctx.save(); ctx.translate(p.x, -p.y); ctx.rotate(p.rot); ctx.scale(.35 + .65 * Math.abs(Math.cos(p.life * p.vr * .6 + p.rot)), 1); ctx.fillStyle = p.kind === 'sugar' ? `rgba(255,253,246,${1 - t * t})` : `rgba(246,238,226,${1 - t})`; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * (p.kind === 'sugar' ? 1 : .6)); if (p.kind === 'sugar') { ctx.fillStyle = `rgba(200,180,150,${.5 * (1 - t * t)})`; ctx.fillRect(-p.size / 2, p.size * .2, p.size, p.size * .3); } ctx.restore(); }
   }
   drawVines();
   // renk grade
@@ -2773,15 +2784,16 @@ function render() {
   if (G.flash > .02 && n) { const p = G.pieces[n - 1]; ctx.globalAlpha = G.flash * .8; ctx.drawImage(SPR.warm, p.x - 90, -(n - 1) * PH - 140, 180, 180); ctx.globalAlpha = 1; }
   for (const p of parts) {
     if (p.kind !== 'spark') continue;
-    const t = p.life / p.max, s = p.size * (1 - t * .5);
-    ctx.globalAlpha = 1 - t; ctx.drawImage(SPR.spark, p.x - s, -p.y - s, s * 2, s * 2);
+    const t = p.life / p.max, s = p.size * (1 - t * .5), a = 1 - t, x = p.x - s, y = -p.y - s;
+    if (t < .4) { ctx.globalAlpha = a * (1 - t / .4); ctx.drawImage(SPR.spark, x, y, s * 2, s * 2); ctx.globalAlpha = a * t / .4; ctx.drawImage(SPR.sparkG, x, y, s * 2, s * 2); }
+    else { const k = (t - .4) / .6; ctx.globalAlpha = a * (1 - k) * .9; ctx.drawImage(SPR.sparkG, x, y, s * 2, s * 2); ctx.globalAlpha = a * k * .8; ctx.drawImage(SPR.sparkE, x, y, s * 2, s * 2); }
   }
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   // buhar & toz
   for (const p of parts) {
     if (p.kind !== 'steam' && p.kind !== 'puff') continue;
-    const t = p.life / p.max, s = p.size * (1 + t * 1.6);
-    ctx.globalAlpha = (p.kind === 'steam' ? .16 : .5) * Math.sin(t * Math.PI);
+    const t = p.life / p.max, s = p.size * (1 + Math.sqrt(t) * (p.kind === 'steam' ? 2.4 : 1.8));
+    ctx.globalAlpha = (p.kind === 'steam' ? .17 : .5) * Math.min(1, t * 6) * Math.pow(1 - t, 1.4);
     ctx.drawImage(SPR.soft, p.x - s, -p.y - s, s * 2, s * 2);
   }
   ctx.globalAlpha = 1;
