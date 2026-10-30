@@ -1072,7 +1072,7 @@ const G = {
   state: 'title', prev: null, t: 0, timeScale: 1, slow: 1,
   pieces: [], score: 0, best: parseInt(store.get('ck_best', '0'), 10) || 0, combo: 0, maxCombo: 0, perfects: 0,
   hang: null, drop: null, topple: null, bodies: [], risk: 0, warned: false, recordShown: false,
-  cam: { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 }, shake: 0, flash: 0,
+  cam: { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 }, trauma: 0, zk: 0, flash: 0,
   phase: 0, phaseFrom: 0, phaseT: 1, overAt: 0, spawnIn: 0, lastGolden: false,
   tutorial: store.get('ck_tut', '0') !== '1', tutDone: 0,
   mode: 'classic', mod: null, ph0: 0, seed: 1, ch: null, boost: {}, boostSel: new Set(), boosted: false, revived: false, panel: null, offerRevive: false, runSugar: 0,
@@ -1425,6 +1425,9 @@ function land() {
     straighten(G.combo >= 3 ? .5 : .82);
     Snd.perfect(G.combo, d.spec.golden);
     perfectFx(piece.tx, ty, G.combo, d.spec.golden);
+    hitStop = d.spec.golden ? .085 : G.combo >= 5 ? .07 : .05;
+    G.zk = Math.max(G.zk, (d.spec.golden ? .03 : .012) + Math.min(G.combo, 10) * .002);
+    G.trauma = Math.min(1, G.trauma + (d.spec.golden ? .2 : .1));
     vibrate(G.combo >= 3 ? [12, 30, 12] : 10);
     floater(piece.tx, ty + PH + 26, G.combo > 1 ? `${T('Mükemmel')} ×${G.combo}` : T('Mükemmel'), '#fff1c4', 30);
     if (G.combo >= 3 && G.combo % 3 === 0) floater(piece.tx, ty + PH + 64, T('Denge!'), '#ffd27a', 20, true);
@@ -1433,7 +1436,7 @@ function land() {
     G.combo = 0;
     const hard = clamp(Math.abs(off) / SUP, 0, 1);
     Snd.land(hard);
-    G.shake = Math.max(G.shake, 2 + hard * 5);
+    G.trauma = Math.min(1, G.trauma + .22 + hard * .33);
     burst(piece.tx + off * .3, ty + 4, 6 + (hard * 10 | 0), 'drop');
     if (d.spec.golden) gain += 1;
   }
@@ -1456,7 +1459,7 @@ function land() {
   // rekor yüksekliği geçildi: hafif kutlama (puan rekorunun konfetisiyle yarışmasın)
   const h = G.pieces.length;
   if (G.bestH0 >= 3 && !G.recCrossed && h > G.bestH0) {
-    G.recCrossed = true; G.recT = G.t; G.flash = 1; Snd.chime(); vibrate([12, 40, 12]);
+    G.recCrossed = true; G.recT = G.t; G.flash = 1; slowMo = .55; Snd.chime(); vibrate([12, 40, 12]);
     rings.push({ x: piece.tx, y: ty + PH, t: 0, max: .9, r0: 40, r1: 180, golden: true });
     floater(topX(), topY() + 200, tr('Rekor yükseklik!'), '#ffe08a', 26, true);
   }
@@ -1473,7 +1476,7 @@ function land() {
   }
   // rekor
   if (G.best > 0 && G.score > G.best && !G.recordShown) {
-    G.recordShown = true; Snd.record(); floater(topX(), topY() + 160, T('Yeni rekor!'), '#ffe08a', 30); confetti(30);
+    G.recordShown = true; slowMo = .55; Snd.record(); floater(topX(), topY() + 160, T('Yeni rekor!'), '#ffe08a', 30); confetti(30);
   }
   // evre
   const ph = (G.ph0 + Math.floor(G.pieces.length / PHASE_LEN)) % PHASES.length;
@@ -1488,7 +1491,7 @@ function spareSave(side) {
   const p = G.pieces.pop();
   G.bodies.push({ p, x: p.tx, y: G.pieces.length * PH + 50, vx: side * 170, vy: 280, a: 0, va: side * 3, alive: true });
   G.combo = 0; ui.combo(''); straighten(.7); G.risk = stability().risk; G.warned = false;
-  G.flash = .6; G.shake = Math.max(G.shake, 4); Snd.creak(); vibrate([20, 40, 20]);
+  G.flash = .6; G.trauma = Math.min(1, G.trauma + .45); Snd.creak(); vibrate([20, 40, 20]);
   floater(topX(), topY() + PH + 60, tr('Yedek tabak!'), '#ffe08a', 26, true);
   G.spawnIn = .6;
 }
@@ -1535,7 +1538,7 @@ function breakTopple() {
 function shatter(b) {
   b.alive = false;
   Snd.crash(1);
-  G.shake = Math.max(G.shake, 9);
+  G.trauma = Math.min(1, G.trauma + .35);
   burst(b.x, b.y, 18, 'shard');
   burst(b.x, b.y, 14, 'tea', TEA[b.p.tea]);
   burst(b.x, b.y, 7, 'porcelain');
@@ -2287,7 +2290,7 @@ function update(dt) {
   }
   const k = 1 - Math.exp(-dt * 3.2);
   c.x = lerp(c.x, c.tx, k); c.y = lerp(c.y, c.ty, k); c.z = lerp(c.z, c.tz, 1 - Math.exp(-dt * 2.2));
-  G.shake *= Math.exp(-dt * 7); G.flash *= Math.exp(-dt * 5);
+  G.flash *= Math.exp(-dt * 5);
   // vapur & martılar
   for (const b of balloons) { b.x += b.v * dt; b.ph += dt * .3; if (b.x > 1.15) b.x = -.15; }
   for (const m of motes) { m.v += dt * .012 * m.sp; m.w += Math.sin(G.t * .4 + m.ph) * dt * .03; if (m.v > 1) { m.v = 0; m.w = Math.random() * 2 - 1; } }
@@ -2459,9 +2462,9 @@ function drawBackground(P) {
     }
   }
 }
-function worldTransform(shx, shy) {
-  const c = G.cam, k = S * c.z;
-  ctx.setTransform(DPR * k, 0, 0, DPR * k, DPR * (W / 2 + shx - c.x * k), DPR * (H / 2 + shy + c.y * k));
+function worldTransform(shx, shy, rot) {
+  const c = G.cam, K = DPR * S * c.z * (1 + G.zk), co = Math.cos(rot || 0) * K, si = Math.sin(rot || 0) * K;
+  ctx.setTransform(co, si, -si, co, DPR * (W / 2 + shx) - co * c.x - si * c.y, DPR * (H / 2 + shy) - si * c.x + co * c.y);
 }
 function drawSprite(sp, x, y) { ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); }
 // yansıma yalnız tepedeki bardaklarda (kamera oraya bakar)
@@ -2627,8 +2630,9 @@ function render() {
   // ince katmanlar varılan vaktin rengini alır: geçiş boyunca her kare yeniden boyanmasın
   PT = PHASES[G.phase];
   REFL = tinted(SPR.reflM, mixc(mixc(PT.skyMid, PT.skyBot, .5), PT.glow, .25));
-  const shx = (Math.random() - .5) * G.shake * S, shy = (Math.random() - .5) * G.shake * S;
-  worldTransform(shx, shy);
+  const tq = G.trauma * G.trauma, tt = performance.now() * .001;
+  const shx = Math.sin(tt * 47.3) * 9 * tq * S, shy = Math.sin(tt * 53.1 + 1) * 7 * tq * S, shr = Math.sin(tt * 39.7 + 2) * .03 * tq;
+  worldTransform(shx, shy, shr);
   const bulbs = drawLights(P);
   drawTable();
   drawSprite(SPR.tray, 0, 0);
@@ -2685,7 +2689,7 @@ function render() {
   ctx.globalCompositeOperation = 'lighter';
   const dk = phaseW(1) + phaseW(3) * .7;
   if (dk > .02) drawDust(P, dk);
-  worldTransform(shx, shy);
+  worldTransform(shx, shy, shr);
   // gece ışıkları
   if (P.night > .15) {
     for (const b of bulbs) { ctx.globalAlpha = P.night * .8; ctx.drawImage(SPR.warm, b[0] - 22, b[1] - 22, 44, 44); }
@@ -2879,7 +2883,7 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 // ------------------------------------------------------------------ loop
-let last = performance.now(), frames = 0, fpsT = 0, fps = 60, workSum = 0, workN = 0, slowT = 0;
+let last = performance.now(), frames = 0, fpsT = 0, fps = 60, workSum = 0, workN = 0, slowT = 0, hitStop = 0, slowMo = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   const idle = G.state === 'paused' ? 95 : G.state === 'title' && !wheelAnim ? 31 : 0;
@@ -2889,7 +2893,11 @@ function frame(now) {
   const realDt = Math.min(dt, 1);
   dt = Math.min(dt, 1 / 20);
   const w0 = performance.now();
-  if (G.state !== 'paused') update(dt * G.timeScale);
+  if (G.state !== 'paused') {
+    G.trauma = Math.max(0, G.trauma - dt * 1.6); G.zk *= Math.exp(-dt * 9);
+    if (hitStop > 0) hitStop -= dt;
+    else { let sd = dt; if (slowMo > 0) { slowMo -= dt; sd *= .4; } update(sd * G.timeScale); }
+  }
   render();
   const work = performance.now() - w0;
   workSum += work; workN++;
