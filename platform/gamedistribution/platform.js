@@ -81,7 +81,12 @@
     'Seri kurtarıldı': 'Streak saved', 'Seriyi kurtar': 'Save your streak',
     'Bu haftanın hedefleri': "This week's goals", 'gün kaldı': 'days left',
     'Bu hafta {n} bardak diz': 'Stack {n} glasses this week', 'Bu hafta {n} farklı gün oyna': 'Play on {n} different days this week',
-    'Ana ekrana ekle': 'Add to home screen'
+    'Ana ekrana ekle': 'Add to home screen',
+    'Sonraki ele güç kat': 'Power up your next run', 'Sakin askı': 'Calm hanger', 'İlk 15 bardak yavaş': 'First 15 glasses slower',
+    'Yedek tabak': 'Spare saucer', 'Bir devrilmeyi kurtarır': 'Saves one topple', 'Yedek tabak!': 'Spare saucer!',
+    'Altın saat': 'Golden hour', 'Yaldızlı bardak ×2': 'Gilded glasses ×2',
+    'Seviye': 'Level', 'kaldı': 'to go', 'Çırak': 'Apprentice', 'Ocakçı': 'Stove keeper', 'Demci': 'Brewer', 'Kalfa': 'Journeyman',
+    'Usta': 'Master', 'Çaycıbaşı': 'Head tea maker', 'Semaver ustası': 'Samovar master', 'Çay efendisi': 'Tea lord', 'Boğaz efsanesi': 'Bosphorus legend'
   };
   var lang = 'en';
   try { var l = (navigator.languages && navigator.languages[0]) || navigator.language || ''; if (/^tr\b/i.test(l)) lang = 'tr'; } catch (e) {}
