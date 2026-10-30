@@ -1763,7 +1763,7 @@ function toggleSet(k) {
 }
 function setGfx(v) {
   if (!GFX_CAP[v] || v === SET.gfx) return;
-  SET.gfx = v; saveSet(); dprCap = GFX_CAP[v]; slowT = 0;
+  SET.gfx = v; saveSet(); dprCap = GFX_CAP[v]; qLv = 2; qMax = 2; qGood = 0;
   resize(); Snd.click(); renderSet();
 }
 function openCups() { openPanel('cups'); }
@@ -2419,12 +2419,14 @@ function drawBackground(P) {
         ctx.fillRect(wx, wy, ws, ws);
       }
       if (glow) {
-        ctx.globalCompositeOperation = 'lighter';
-        for (const w of BG.wins) {
-          if (w[2] <= .3) continue;
-          ctx.globalAlpha = nt * (.6 + .4 * Math.sin(G.t * .7 + w[2] * 30)) * .28;
-          ctx.drawImage(SPR.warm, ox + w[0] / DPR + ws / 2 - gs / 2, ty + w[1] / DPR + ws / 2 - gs / 2, gs, gs);
+        // ışıltılar bir kez ufuk boyutunda tuvale basılır, her karede tek çizim
+        if (!BG.wg) {
+          BG.wg = mk(BG.bw, BG.bh); const wg = BG.wg.getContext('2d'), gd = gs * DPR, wd = ws * DPR;
+          wg.globalCompositeOperation = 'lighter';
+          for (const w of BG.wins) { if (w[2] <= .3) continue; wg.globalAlpha = .28 * (.7 + .3 * w[2]); wg.drawImage(SPR.warm, w[0] + wd / 2 - gd / 2, w[1] + wd / 2 - gd / 2, gd, gd); }
         }
+        ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = nt;
+        ctx.drawImage(BG.wg, ox, ty, BG.bw / DPR, BG.bh / DPR);
         ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       }
     }
@@ -3025,7 +3027,26 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 
 // ------------------------------------------------------------------ loop
-let last = performance.now(), frames = 0, fpsT = 0, fps = 60, workSum = 0, workN = 0, slowT = 0, hitStop = 0, slowMo = 0;
+let last = performance.now(), frames = 0, fpsT = 0, fps = 60, workSum = 0, workN = 0, hitStop = 0, slowMo = 0;
+// kalite merdiveni (yalnız çözünürlük): oyunda 4 sn ısınma, 2.5 sn'lik pencereler; yavaşsa bir basamak iner,
+// 4 pencere üst üste rahatsa geri çıkar, çıktığı basamakta yine yavaşlarsa o basamak kilitlenir
+const Q_CAP = [1.4, 1.75];
+let qLv = 2, qMax = 2, qGood = 0, qWarm = 4, qN = 0, qT = 0;
+function qCap(q) { return q >= 2 ? GFX_CAP[SET.gfx] : Math.min(Q_CAP[q], GFX_CAP[SET.gfx]); }
+function setQuality(q) {
+  qLv = q; const was = DPR; dprCap = qCap(q);
+  if (Math.min(window.devicePixelRatio || 1, dprCap) !== was) resize();
+}
+function qualityTick(realDt) {
+  if (G.state !== 'playing' || window.__fixDpr || SET.gfx === 'eco') { qWarm = Math.max(qWarm, 1.5); qN = 0; qT = 0; return; }
+  if ((qWarm -= realDt) > 0) return;
+  qN++; qT += realDt;
+  if (qT < 2.5) return;
+  const f = qN / qT; qN = 0; qT = 0;
+  if (f < 42 && qLv > 0) { if (qGood < 0) qMax = qLv - 1; setQuality(qLv - 1); qGood = 0; qWarm = 1; }
+  else if (f > 56 && qLv < qMax && ++qGood >= 4) { setQuality(qLv + 1); qGood = -1; qWarm = 1; }
+  else if (f <= 56 && qGood > 0) qGood = 0;
+}
 function frame(now) {
   requestAnimationFrame(frame);
   const idle = G.state === 'paused' ? 95 : G.state === 'title' && !wheelAnim ? 31 : 0;
@@ -3044,12 +3065,9 @@ function frame(now) {
   const work = performance.now() - w0;
   workSum += work; workN++;
   frames++; fpsT += realDt;
-  if (idle) { frames = 0; fpsT = 0; slowT = 0; }
-  else if (fpsT >= 1) {
-    fps = frames / fpsT; frames = 0; fpsT = 0;
-    // uyarlanabilir çözünürlük
-    if (fps < 42 && DPR > 1.5 && !window.__fixDpr) { slowT++; if (slowT >= 3) { dprCap = 1.5; slowT = 0; resize(); } } else slowT = 0;
-  }
+  if (idle) { frames = 0; fpsT = 0; }
+  else if (fpsT >= 1) { fps = frames / fpsT; frames = 0; fpsT = 0; }
+  if (!idle) qualityTick(realDt);
 }
 
 // ------------------------------------------------------------------ test kancası
@@ -3060,7 +3078,7 @@ window.__game = {
   get canTap() { return G.state === 'playing' && !!G.hang && !G.hang.released && G.hang.it >= .55; },
   get offset() { return G.hang ? hangPos(G.hang).x - topX() : null; },
   get fps() { return fps; },
-  perf() { const r = { fps, avgWorkMs: workN ? workSum / workN : 0, dpr: DPR, frames: workN }; workSum = 0; workN = 0; return r; },
+  perf() { const r = { fps, avgWorkMs: workN ? workSum / workN : 0, dpr: DPR, frames: workN, q: qLv, qMax }; workSum = 0; workN = 0; return r; },
   get mode() { return G.mode; }, get total() { return G.total; }, get skin() { return G.skin; },
   get canRevive() { const b = $('reviveBtn'); return G.state === 'over' && !b.classList.contains('hidden'); },
   get daily() { return G.mod ? G.mod.name : null; }, get revived() { return G.revived; },
