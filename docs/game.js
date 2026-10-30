@@ -444,6 +444,7 @@ function buildSprites() {
   SPR.softM = { c: SPR.soft };
   SPR.mistM = { c: SPR.soft };
   SPR.pathM = { c: SPR.soft };
+  SPR.wxM = { c: SPR.soft };
   SPR.contact = sprite(90, 20, 45, 10, (g) => softEllipse(g, 0, 0, 40, 6.5, [40, 14, 6], .42));
   SPR.kilimPattern = ctx.createPattern(SPR.tile.c, 'repeat');
   // camda gökyüzü yansıması: her karede o anki gök rengiyle boyanır
@@ -2312,6 +2313,7 @@ function update(dt) {
   const k = 1 - Math.exp(-dt * 3.2);
   c.x = lerp(c.x, c.tx, k); c.y = lerp(c.y, c.ty, k); c.z = lerp(c.z, c.tz, 1 - Math.exp(-dt * 2.2));
   G.flash *= Math.exp(-dt * 5);
+  updateWeather(dt);
   G.dim = G.state === 'toppling' ? Math.min(.7, G.dim + dt * 2.5) : G.dim * Math.exp(-dt * 1.2);
   // vapur & martılar
   for (const b of balloons) { b.x += b.v * dt; b.ph += dt * .3; if (b.x > 1.15) b.x = -.15; }
@@ -2674,9 +2676,81 @@ function drawDust(P, k) {
   }
   ctx.globalAlpha = 1;
 }
+// hava durumu: yalnız görsel. mekân + günün tarihinden seçilir; oyunun rng()/evRng()'sine dokunmaz,
+// meydan okuma ve haftalık turnuva herkes için aynı kalır
+const WX_ODDS = { bogaz: [.45, .3, .1, .15], rize: [.2, .25, .3, .25], kapadokya: [.65, .3, .05, 0], bodrum: [.75, .2, 0, .05] };
+const WX_KINDS = ['clear', 'cloudy', 'mist', 'rain'];
+const WX = { key: '', k: 'clear', a: 0, force: null, drops: [] };
+function weatherNow() {
+  const v = VENUES[G.venue], key = dayKey() + v.id + (WX.force || '');
+  if (WX.key !== key) {
+    let h = 2166136261; for (const ch of key) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+    let r = (h >>> 0) / 4294967296, i = 0;
+    const odds = WX_ODDS[v.id] || WX_ODDS.bogaz;
+    while (i < 3 && r >= odds[i]) { r -= odds[i]; i++; }
+    const k = WX.force || WX_KINDS[i];
+    if (k !== WX.k) WX.a = 0;
+    WX.k = k; WX.key = key;
+  }
+  return WX;
+}
+function updateWeather(dt) {
+  const w = weatherNow();
+  w.a = Math.min(1, w.a + dt / 1.5);
+  if (w.k !== 'rain') return;
+  const n = eco() ? 45 : 110;
+  while (w.drops.length < n) w.drops.push({ x: Math.random(), y: Math.random(), v: rand(.8, 1.2), l: rand(.7, 1.3) });
+  const sl = .14 + (G.wind ? G.wind.dir * .55 * Math.min(1, G.wind.t * 2) : 0);
+  for (let i = 0; i < n; i++) {
+    const d = w.drops[i], dy = dt * 1.5 * d.v;
+    d.y += dy; d.x += dy * sl * H / W;
+    if (d.y > 1.05) { d.y -= 1.1; d.x = Math.random() * 1.3 - .15; }
+  }
+  w.sl = sl;
+}
+// gök ve ufka tek renk perdesi: bulutlu griye, sisli puslu beyaza, yağmurlu mavi-griye çeker
+function drawWeatherBack(P) {
+  const w = weatherNow(), a = w.a;
+  if (w.k === 'clear' || a <= 0) return;
+  const hz = hazeOf(P), nt = P.night;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (w.k === 'mist' || (w.k === 'rain' && VENUES[G.venue].id === 'rize')) {
+    const mc = mixc(mixc(hz, [236, 236, 236], .4 * (1 - nt)), P.skyMid, .2), m = w.k === 'mist' ? 1 : .6;
+    const gr = ctx.createLinearGradient(0, 0, 0, H);
+    gr.addColorStop(0, rgb(mc, .12 * a * m)); gr.addColorStop(.58, rgb(mc, .55 * a * m)); gr.addColorStop(1, rgb(mc, .3 * a * m));
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+    // ufukta süzülen sis kuşakları
+    ctx.globalAlpha = .35 * a * m;
+    const mt = tinted(SPR.wxM, mc);
+    for (let i = 0; i < 3; i++) { const x = ((G.t * (4 + i * 2) + i * 260) % (W + 600)) - 300, y = H * (.56 + i * .04); ctx.drawImage(mt, x - 300 * S, y - 26 * S, 600 * S, 52 * S); }
+    ctx.globalAlpha = 1;
+  }
+  if (w.k === 'cloudy' || w.k === 'rain') {
+    const cc = w.k === 'rain' ? mixc([112, 122, 142], P.skyMid, .35 + nt * .4) : mixc([168, 172, 182], P.skyMid, .4 + nt * .4);
+    ctx.fillStyle = rgb(cc, (w.k === 'rain' ? .34 : .22) * a); ctx.fillRect(0, 0, W, H);
+  }
+}
+function drawRain(P) {
+  const w = WX;
+  if (w.k !== 'rain' || w.a <= 0 || w.sl === undefined) return;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.strokeStyle = P.night > .5 ? `rgba(190,205,235,${.3 * w.a})` : `rgba(225,232,242,${.32 * w.a})`;
+  ctx.lineWidth = .9 * S; ctx.lineCap = 'round'; ctx.beginPath();
+  const n = Math.min(w.drops.length, eco() ? 45 : 110), L = 16 * S, sl = w.sl;
+  for (let i = 0; i < n; i++) { const d = w.drops[i], x = d.x * W, y = d.y * H, l = L * d.l; ctx.moveTo(x, y); ctx.lineTo(x - sl * l, y - l); }
+  ctx.stroke();
+}
+function weatherGrade(gc) {
+  const w = WX;
+  if (w.k === 'clear' || w.a <= 0) return gc;
+  const t = w.k === 'rain' ? [186, 196, 216, .16] : w.k === 'mist' ? [232, 232, 236, .06] : [214, 216, 224, .1], a = w.a;
+  const c = mixc(gc, t, .55 * a);
+  return [c[0], c[1], c[2], gc[3] + t[3] * a];
+}
 function render() {
   const P = blendedPhase();
   drawBackground(P);
+  drawWeatherBack(P);
   // ince katmanlar varılan vaktin rengini alır: geçiş boyunca her kare yeniden boyanmasın
   PT = PHASES[G.phase];
   REFL = tinted(SPR.reflM, mixc(mixc(PT.skyMid, PT.skyBot, .5), PT.glow, .25));
@@ -2740,12 +2814,14 @@ function render() {
     }
     else if (p.kind === 'porcelain' || p.kind === 'sugar') { ctx.save(); ctx.translate(p.x, -p.y); ctx.rotate(p.rot); ctx.scale(.35 + .65 * Math.abs(Math.cos(p.life * p.vr * .6 + p.rot)), 1); ctx.fillStyle = p.kind === 'sugar' ? `rgba(255,253,246,${1 - t * t})` : `rgba(246,238,226,${1 - t})`; ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * (p.kind === 'sugar' ? 1 : .6)); if (p.kind === 'sugar') { ctx.fillStyle = `rgba(200,180,150,${.5 * (1 - t * t)})`; ctx.fillRect(-p.size / 2, p.size * .2, p.size, p.size * .3); } ctx.restore(); }
   }
+  drawRain(P);
   drawVines();
   // renk grade
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'multiply';
-  ctx.drawImage(gradeOverlay(P.grade), 0, 0, cv.width, cv.height);
-  if (G.dim > .01) { ctx.globalAlpha = G.dim; ctx.drawImage(gradeOverlay(P.grade), 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; }
+  const gov = gradeOverlay(weatherGrade(P.grade));
+  ctx.drawImage(gov, 0, 0, cv.width, cv.height);
+  if (G.dim > .01) { ctx.globalAlpha = G.dim; ctx.drawImage(gov, 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; }
   ctx.globalCompositeOperation = 'lighter';
   const dk = phaseW(1) + phaseW(3) * .7;
   if (dk > .02) drawDust(P, dk);
@@ -2983,7 +3059,7 @@ window.__game = {
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
   get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get xp() { return { ...lvOf(XP.n), n: XP.n, paid: XP.paid, rank: rankOf(lvOf(XP.n).l) }; }, get boost() { return { ...G.boost }; }, get boostSel() { return [...G.boostSel]; }, toggleBoost: (k) => toggleBoost(k, $('boostRow')), get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
   start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR, shareCard, get card() { return G.card; }, get evLog() { return G.evLog.join(','); }, get wk() { return { best: wkBest(), seed: wkSeed(), fr: wkFriends(), name: myName(), link: wkLink() }; },
-  setTimeScale(s) { G.timeScale = s; }, get fx() { return { trauma: G.trauma, zk: G.zk, hitStop, slowMo }; },
+  setTimeScale(s) { G.timeScale = s; }, setWeather(k) { WX.force = k || null; }, get weather() { const w = weatherNow(); return { k: w.k, a: w.a }; }, get fx() { return { trauma: G.trauma, zk: G.zk, hitStop, slowMo }; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
   // tam ortada bırakmak için askıyı ortaya kadar ilerlet
   aimPerfect(maxSteps) {
