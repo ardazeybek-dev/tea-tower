@@ -1198,6 +1198,8 @@ function spinState() { const u = spinsUsed(); return { free: u < 1, extra: u ===
 function setupMode() {
   if (G.mode === 'daily') { const d = dailyToday(); G.mod = d.mod; G.ph0 = d.ph0; rng = seeded(d.num * 7 + 1); }
   else { G.mod = null; G.ph0 = 0; G.seed = G.mode === 'challenge' ? G.ch.seed : 1 + (Math.random() * 2147483646 | 0); rng = seeded(G.seed); }
+  // olaylar ayrı bir üreteçten: bardak dizisi eski linklerle aynı kalır, meydan okumada iki taraf aynı olayları görür
+  evRng = G.mode === 'daily' ? null : seeded((G.seed ^ 0x2f6b1d) % 2147483646 + 1);
 }
 // meydan okuma: link bardak dizisini (tohum) ve geçilecek puanı taşır; kurallar klasikle aynı, ikinci şans yok
 const CH_URL = 'https://ardazeybek-dev.github.io/tea-tower/';
@@ -1255,11 +1257,33 @@ function swingParams(n) {
   const T = Math.max(1.12, 2.6 - n * .052) * (m.T || 1) * (G.boost.calm && n < 15 ? 1.3 : 1);
   return { A: Math.asin(Ah / L), T };
 }
+// oyun içi olaylar: rüzgâr (birkaç bardak düşeni yana iter), önden geçen martı (dikkat dağıtır), sıcak çay (mükemmel bırakılırsa şeker)
+// ilk 8 bardakta yok, Günlük çayda yok; her bardakta üreteç aynı sayıda çağrılır ki dizi oyuncunun hamlesinden bağımsız kalsın
+let evRng = null;
+const EV_HOT = 3;
+function pickEvent(n) {
+  if (!evRng) return null;
+  const r = evRng(), r2 = evRng(), w = G.wind;
+  if (w && w.left > 0) { w.left--; return null; }
+  G.wind = null;
+  if (n < 8) return null;
+  if (G.evCd > 0) { G.evCd--; return null; }
+  if (r >= .16) return null;
+  G.evCd = 3;
+  if (r2 < .4) { G.wind = { dir: r2 < .2 ? 1 : -1, left: 2, t: 0 }; G.evLog.push(n + 'w'); return 'wind'; }
+  if (r2 < .7) { G.evLog.push(n + 'g'); return 'gull'; }
+  G.evLog.push(n + 'h'); return 'hot';
+}
 function spawnHang() {
   const n = G.pieces.length, sp = swingParams(n);
   const dir = n % 2 ? 1 : -1;
   G.hang = { spec: newPieceSpec(), ph: dir > 0 ? Math.PI / 2 : -Math.PI / 2, A: sp.A, T: sp.T, px: topX(), it: 0, theta: 0, retract: 0, released: false };
   G.hang.theta = G.hang.A * Math.sin(G.hang.ph);
+  const ev = pickEvent(n);
+  if (ev === 'hot') G.hang.spec.hot = true;
+  if (ev === 'wind') floater(topX(), topY() + 240, tr(G.wind.dir > 0 ? 'Rüzgâr →' : '← Rüzgâr'), '#e6f2ff', 24, true);
+  if (ev === 'gull') { G.fgGull = { t: 0, dir: n % 2 ? -1 : 1 }; Snd.gull(); }
+  if (ev === 'hot') floater(topX(), topY() + 240, tr('Sıcak çay!'), '#ffd2a8', 24, true);
 }
 function hangPos(h) {
   const pivotY = topY() + HC + L + (1 - easeOutBack(clamp(h.it, 0, 1))) * 320;
@@ -1271,6 +1295,7 @@ function resetWorld() {
   G.drop = null; G.topple = null; G.score = 0; G.combo = 0; G.maxCombo = 0; G.perfects = 0; G.risk = 0; G.warned = false; G.recordShown = false;
   G.lastGolden = false; G.revived = false; G.offerRevive = false; G.runSugar = 0;
   G.recCrossed = false; G.recT = 0; G.mile = 0; G.chBeat = false; G.boost = {}; G.boosted = false; G.runXp = 0;
+  G.wind = null; G.evCd = 0; G.evLog = []; G.fgGull = null;
 }
 function demoTower() {
   resetWorld();
@@ -1345,6 +1370,7 @@ function land() {
     vibrate(G.combo >= 3 ? [12, 30, 12] : 10);
     floater(piece.tx, ty + PH + 26, G.combo > 1 ? `${T('Mükemmel')} ×${G.combo}` : T('Mükemmel'), '#fff1c4', 30);
     if (G.combo >= 3 && G.combo % 3 === 0) floater(piece.tx, ty + PH + 64, T('Denge!'), '#ffd27a', 20, true);
+    if (d.spec.hot) { G.runSugar += EV_HOT; Wallet.add(EV_HOT); floater(piece.tx - 74, ty + PH - 10, `${tr('Sıcak çay')} +${EV_HOT}`, '#ffd2a8', 20, true); }
   } else {
     G.combo = 0;
     const hard = clamp(Math.abs(off) / SUP, 0, 1);
@@ -2101,11 +2127,14 @@ function update(dt) {
   if (G.drop) {
     const d = G.drop;
     d.vy -= 2700 * dt; d.y += d.vy * dt; d.ang *= Math.exp(-dt * 16);
+    if (G.wind) d.x += G.wind.dir * (34 + Math.min(G.pieces.length, 40) * .4) * dt;
     if (d.y <= topY()) { d.y = topY(); land(); }
   }
   if (G.state === 'playing' && !G.drop && G.hang && G.hang.released) {
     G.spawnIn -= dt; if (G.spawnIn <= 0) spawnHang();
   }
+  if (G.wind) G.wind.t += dt;
+  if (G.fgGull && (G.fgGull.t += dt) > 2.2) G.fgGull = null;
   // parçalar
   for (const p of G.pieces) p.x = lerp(p.x, p.tx, 1 - Math.exp(-dt * 9));
   // devrilme
@@ -2347,6 +2376,7 @@ function drawPiece(p, x, y, sq) {
   drawSprite(SPR.contact, x, y - 1);
   drawSprite(p.golden ? SPR.saucerGold : SPR.saucer, x, y);
   drawSprite(p.golden ? SPR.glassGold : SPR.glass[p.tea], x, y - LIFT);
+  if (p.hot) drawSteam(x, y - LIFT - 70);
   if (REFL && reflOn) { const a = ctx.globalAlpha, r = SPR.reflM; ctx.globalAlpha = a * .3; ctx.drawImage(REFL, x - r.ox, y - LIFT - r.oy, r.w, r.h); ctx.globalAlpha = a; }
   if (sq) ctx.restore();
 }
@@ -2407,6 +2437,33 @@ function drawRecordLine() {
   ctx.fillStyle = 'rgba(60,24,20,0.78)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - tw - 12, y - 14, tw + 24, 28, 14) : ctx.rect(x - tw - 12, y - 14, tw + 24, 28); ctx.fill();
   ctx.fillStyle = '#ffe2a8'; ctx.fillText(txt, x, y + 1);
   ctx.globalAlpha = 1;
+}
+function drawSteam(x, y) {
+  ctx.lineCap = 'round'; ctx.lineWidth = 3;
+  for (let k = 0; k < 3; k++) {
+    const t = (G.t * .9 + k / 3) % 1, x0 = x + (k - 1) * 9;
+    ctx.strokeStyle = `rgba(255,255,255,${.38 * Math.sin(t * Math.PI)})`;
+    ctx.beginPath(); ctx.moveTo(x0, y - t * 30);
+    for (let j = 1; j <= 4; j++) ctx.lineTo(x0 + Math.sin(G.t * 3 + k * 2 + j) * 5, y - t * 30 - j * 9);
+    ctx.stroke();
+  }
+}
+// rüzgâr: askının çevresinde rüzgâr yönünde akan ince çizgiler
+function drawWind() {
+  const w = G.wind, a = Math.min(1, w.t * 2), cx = topX(), cy = topY() + 260;
+  ctx.lineCap = 'round'; ctx.lineWidth = 2;
+  for (let i = 0; i < 9; i++) {
+    const t = (G.t * (.55 + i % 3 * .15) + i * .37) % 1, x = cx + w.dir * (t * 640 - 320), y = -(cy + ((i * 53) % 260) - 130);
+    ctx.strokeStyle = `rgba(240,248,255,${.4 * a * Math.sin(t * Math.PI)})`;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.quadraticCurveTo(x - w.dir * 30, y - 4, x - w.dir * 60, y + 1); ctx.stroke();
+  }
+}
+// önden geçen martı: askının hizasında, büyük ve yakın
+function drawFgGull() {
+  const g = G.fgGull, t = g.t / 2.2, x = topX() + g.dir * (t * 900 - 450), y = -(topY() + 150 + Math.sin(t * 5) * 20), s = 46, f = Math.sin(G.t * 9) * .5;
+  ctx.fillStyle = 'rgba(38,30,34,0.85)'; ctx.strokeStyle = 'rgba(38,30,34,0.85)'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x - s, y - s * f * .8); ctx.quadraticCurveTo(x - s * .5, y - s * (.6 + f * .5), x, y); ctx.quadraticCurveTo(x + s * .5, y - s * (.6 + f * .5), x + s, y - s * f * .8); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x, y + 2, 9, 5, 0, 0, TAU); ctx.fill();
 }
 function drawAski(h) {
   const p = hangPos(h);
@@ -2514,6 +2571,8 @@ function render() {
   }
   // askı
   if (G.hang && (G.state === 'playing' || G.state === 'paused' || (G.hang.retract && G.hang.retract < 1))) drawAski(G.hang);
+  if (G.wind && G.state === 'playing') drawWind();
+  if (G.fgGull) drawFgGull();
   // parçacıklar (normal)
   for (const p of parts) {
     const t = p.life / p.max;
@@ -2755,7 +2814,7 @@ window.__game = {
   get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
   get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get xp() { return { ...lvOf(XP.n), n: XP.n, paid: XP.paid, rank: rankOf(lvOf(XP.n).l) }; }, get boost() { return { ...G.boost }; }, get boostSel() { return [...G.boostSel]; }, toggleBoost: (k) => toggleBoost(k, $('boostRow')), get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
-  start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR, shareCard, get card() { return G.card; },
+  start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR, shareCard, get card() { return G.card; }, get evLog() { return G.evLog.join(','); },
   setTimeScale(s) { G.timeScale = s; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
   // tam ortada bırakmak için askıyı ortaya kadar ilerlet
