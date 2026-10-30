@@ -39,6 +39,7 @@
     'Hediyeyi al': 'Claim gift', 'Yarın yeni hediye': 'New gift tomorrow', 'Çarkı çevir': 'Spin the wheel',
     'Reklam izle, bir daha çevir': 'Watch an ad, spin again', 'Çark yarın yenilenir': 'Wheel resets tomorrow',
     'şeker daha lazım': 'more sugar needed', 'ya da': 'or', 'puanlık kule diktim!': 'point tower, can you beat it?',
+    'Rüzgâr →': 'Gust →', '← Rüzgâr': '← Gust', 'Sıcak çay!': 'Hot tea!', 'Sıcak çay': 'Hot tea',
     'Kopyalandı': 'Copied', 'Zümrüt': 'Emerald', 'Yakut': 'Ruby', 'Sedef': 'Pearl',
     'İlk kat': 'First floor', 'Bir elde 10 bardak diz': 'Stack 10 glasses in one run',
     'Mahalle kahvesi': 'Corner café', 'Bir elde 25 bardak diz': 'Stack 25 glasses in one run',
