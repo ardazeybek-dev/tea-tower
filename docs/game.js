@@ -1195,6 +1195,7 @@ function spinsUsed() { const p = readPair('ck_spin'); return p.key === dayKey() 
 function spinState() { const u = spinsUsed(); return { free: u < 1, extra: u === 1 && !!window.PF && rewardReady() }; }
 function setupMode() {
   if (G.mode === 'daily') { const d = dailyToday(); G.mod = d.mod; G.ph0 = d.ph0; rng = seeded(d.num * 7 + 1); }
+  else if (G.mode === 'week') { G.mod = null; G.ph0 = 0; G.seed = wkSeed(); rng = seeded(G.seed); }
   else { G.mod = null; G.ph0 = 0; G.seed = G.mode === 'challenge' ? G.ch.seed : 1 + (Math.random() * 2147483646 | 0); rng = seeded(G.seed); }
   // olaylar ayrı bir üreteçten: bardak dizisi eski linklerle aynı kalır, meydan okumada iki taraf aynı olayları görür
   evRng = G.mode === 'daily' ? null : seeded((G.seed ^ 0x2f6b1d) % 2147483646 + 1);
@@ -1229,7 +1230,64 @@ function chReward() {
   return CH_PRIZE;
 }
 // paylaşılan skor ancak adil bir koşudan çıkarsa meydan okumaya dönüşür
-const chShareable = () => !window.PF && G.mode !== 'daily' && !G.revived && !G.boosted && G.score >= 5;
+const chShareable = () => !window.PF && G.mode !== 'daily' && G.mode !== 'week' && !G.revived && !G.boosted && G.score >= 5;
+// haftalık turnuva: haftanın tohumu herkese aynı bardak dizisini ve olayları verir; sunucu yok,
+// tablo = bu hafta açılan arkadaş linkleri + kendi haftalık rekorun. Ödül sıraya değil kendi eşiğine:
+// haftalık rekor 20, 40, 60 puanı ilk geçtiğinde her eşik haftada bir kez +25 şeker
+const WK_TIERS = [20, 40, 60], WK_PRIZE = 25;
+const NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} ]{0,11}$/u;
+const wkNum = () => parseInt(weekKey().replace(/-/g, ''), 10);
+const wkSeed = () => (wkNum() * 48271) % 2147483646 + 1;
+function wkSum(w, n, nm) { let h = w % 7919; for (const c of nm) h = (h * 31 + c.codePointAt(0)) % 46655; return (h * 7 + n * 13) % 46656; }
+function wkBest() { const p = readPair('ck_wk_best'); return p.key === weekKey() ? p.n : 0; }
+const cleanName = (v) => String(v || '').replace(/[^\p{L}\p{N} ]/gu, '').replace(/\s+/g, ' ').trimStart().slice(0, 12);
+function myName() {
+  let n = store.get('ck_name', '').trim();
+  if (!NAME_RE.test(n)) { n = tr('Çaycı') + (10 + Math.random() * 90 | 0); store.set('ck_name', n); }
+  return n;
+}
+function wkFriends() {
+  let o = null;
+  try { o = JSON.parse(store.get('ck_wk_fr', 'null')); } catch (e) {}
+  return o && o.k === weekKey() && Array.isArray(o.l) ? o.l.filter((f) => Array.isArray(f) && NAME_RE.test(f[0]) && f[1] > 0 && f[1] <= 5000) : [];
+}
+function wkAddFriend(nm, n) {
+  if (nm === myName()) return;
+  const l = wkFriends(), f = l.find((x) => x[0] === nm);
+  if (f) f[1] = Math.max(f[1], n); else l.push([nm, n]);
+  l.sort((a, b) => b[1] - a[1]);
+  store.set('ck_wk_fr', JSON.stringify({ k: weekKey(), l: l.slice(0, 30) }));
+}
+function wkTable() {
+  const l = wkFriends().map((f) => ({ nm: f[0], n: f[1] })), me = { nm: myName(), n: wkBest(), me: true };
+  l.push(me); l.sort((a, b) => b.n - a.n || (b.me ? 1 : 0) - (a.me ? 1 : 0));
+  return { l, rank: l.indexOf(me) + 1 };
+}
+function wkReward() {
+  const p = readPair('ck_wk_paid'), paid = p.key === weekKey() ? p.n : 0, reach = WK_TIERS.filter((t) => G.score >= t).length;
+  if (reach <= paid) return 0;
+  store.set('ck_wk_paid', weekKey() + '|' + reach);
+  const k = (reach - paid) * WK_PRIZE;
+  G.runSugar += k; Wallet.add(k);
+  return k;
+}
+function wkLink() {
+  const n = wkBest(), nm = myName(), w = wkNum();
+  return n ? `${CH_URL}?w=${w.toString(36)}.${n.toString(36)}.${encodeURIComponent(nm)}.${wkSum(w, n, nm).toString(36)}` : CH_URL;
+}
+function readWeekLink() {
+  if (window.PF) return null;
+  let m = null;
+  try {
+    const u = new URL(location.href);
+    m = /^([0-9a-z]{1,7})\.([0-9a-z]{1,4})\.([^.]{1,12})\.([0-9a-z]{1,4})$/u.exec(u.searchParams.get('w') || '');
+    if (u.searchParams.has('w')) { u.searchParams.delete('w'); history.replaceState(null, '', u.pathname + u.search + u.hash); }
+  } catch (e) {}
+  if (!m) return null;
+  const w = parseInt(m[1], 36), n = parseInt(m[2], 36), nm = m[3];
+  if (!NAME_RE.test(nm) || !(n > 0 && n <= 5000) || wkSum(w, n, nm) !== parseInt(m[4], 36)) return null;
+  return { w, n, nm };
+}
 const parts = [], rings = [], floaters = [];
 // gün batımı/şafak huzmesindeki tozlar: huzme boyunca (v) ve enine (w) konum
 const motes = Array.from({ length: 30 }, () => ({ v: Math.random(), w: Math.random() * 2 - 1, s: rand(.6, 1.4), ph: rand(0, TAU), sp: rand(.5, 1.3) }));
@@ -1513,8 +1571,17 @@ function endGame() {
     $('overMode').textContent = `${tr('Meydan okuma')} · ${tr('Hedef')} ${G.ch.target}`; show('overMode', true);
     if (won) rec = true;
   }
-  $('chLbl').textContent = tr(G.mode === 'challenge' && G.score > G.ch.target ? 'Rövanşa çağır' : 'Arkadaşına meydan oku');
-  show('chBtn', chShareable());
+  if (G.mode === 'week') {
+    const wrec = G.score > wkBest();
+    if (wrec) store.set('ck_wk_best', weekKey() + '|' + G.score);
+    const prize = wkReward(), t = wkTable();
+    $('recordBadge').textContent = tr('Haftanın rekoru!') + (prize ? ` +${prize}` : '');
+    $('recordBadge').classList.remove('near'); show('recordBadge', wrec);
+    $('overMode').textContent = tr('Haftalık turnuva') + (t.l.length > 1 ? ` · ${tr('Sıra')} ${t.rank}/${t.l.length}` : ''); show('overMode', true);
+    if (wrec) rec = true;
+  }
+  $('chLbl').textContent = tr(G.mode === 'week' ? 'Arkadaşlarını çağır' : G.mode === 'challenge' && G.score > G.ch.target ? 'Rövanşa çağır' : 'Arkadaşına meydan oku');
+  show('chBtn', chShareable() || (G.mode === 'week' && !window.PF));
   prepCard();
   renderBoosts();
   overUnlock();
@@ -1614,6 +1681,8 @@ function refreshTitle() {
   if (best) sub += ` · ${tr('Bugün')} ${best}`;
   if (streak) sub += ` · ${tr('Seri')} ${streak}`;
   $('dailySub').textContent = sub;
+  const wb = wkBest(), wt = wkTable();
+  $('weekSub').textContent = $('weekChipSub').textContent = wb ? `${tr('Rekorun')} ${wb}` + (wt.l.length > 1 ? ` · ${wt.rank}/${wt.l.length}` : '') : tr('Herkes aynı bardak');
   show('titleBest', !G.ch); show('chChip', !!G.ch);
   if (G.ch) $('chTarget').textContent = G.ch.target;
   $('ctaTxt').textContent = tr(G.ch ? 'Meydan okumayı kabul et' : 'Başlamak için dokun');
@@ -1634,7 +1703,7 @@ function refreshTitle() {
 function openPanel(id) {
   if (G.panel || !(G.state === 'title' || (id === 'set' && G.state === 'paused'))) return;
   G.panel = id;
-  if (id === 'cups') renderCups(); else if (id === 'gift') renderGift(); else if (id === 'set') renderSet(); else { renderAch(); store.set('ck_misSeen', dayKey()); }
+  if (id === 'cups') renderCups(); else if (id === 'gift') renderGift(); else if (id === 'set') renderSet(); else if (id === 'wk') renderWk(); else { renderAch(); store.set('ck_misSeen', dayKey()); }
   if (G.state === 'paused') show('pause', false);
   show(id, true);
 }
@@ -1945,6 +2014,24 @@ function checkAch() {
   }
   if (G.panel === 'ach') renderAch();
 }
+function renderWk() {
+  const list = $('wkList'), t = wkTable(), left = 7 - (new Date().getDay() + 6) % 7;
+  list.textContent = '';
+  const h = document.createElement('div'); h.className = 'list-head'; h.textContent = `${tr('Bu hafta')} · ${left} ${tr('gün kaldı')}`; list.append(h);
+  t.l.forEach((r, i) => {
+    const el = document.createElement('div'); el.className = 'ach' + (r.me ? ' me' : '');
+    el.innerHTML = '<b></b><span class="rw"></span>';
+    el.querySelector('b').textContent = `${i + 1}. ${r.nm}` + (r.me ? ` (${tr('sen')})` : '');
+    el.querySelector('.rw').textContent = r.n || '–';
+    list.append(el);
+  });
+  const p = readPair('ck_wk_paid'), paid = p.key === weekKey() ? p.n : 0, next = WK_TIERS[paid];
+  const note = document.createElement('div'); note.className = 'wk-note';
+  note.textContent = (next ? `${tr('Haftalık rekorun')} ${next} ${tr('puanı geçince')} +${WK_PRIZE} ${tr('şeker')}. ` : `${tr('Bu haftanın ödüllerini aldın')}. `)
+    + tr(t.l.length > 1 ? 'Arkadaşların link gönderdikçe tablo güncellenir.' : 'Arkadaşlarını çağır, linki açınca tabloya girerler.');
+  list.append(note);
+  $('wkName').value = myName();
+}
 function renderAch() {
   const list = $('achList'); list.textContent = '';
   const head = (txt) => { const h = document.createElement('div'); h.className = 'list-head'; h.textContent = txt; list.append(h); };
@@ -2031,7 +2118,7 @@ function shareCard() {
   g.font = '800 44px Nunito, sans-serif'; g.fillText(tr('Çay Kulesi').toLocaleUpperCase('tr'), CW / 2, 110);
   g.font = '800 250px Fraunces, Georgia, serif'; g.fillText(String(G.score), CW / 2, 340);
   g.font = '700 46px Nunito, sans-serif'; g.fillText(tr('puan'), CW / 2, 405);
-  const line = chShareable() ? tr('Aynı bardaklarla beni geç') : G.mode === 'daily' ? `${tr('Günlük çay')} · ${tr(G.mod.name)}` : tr('Kulemi geçebilir misin?');
+  const line = chShareable() ? tr('Aynı bardaklarla beni geç') : G.mode === 'week' ? tr('Haftalık turnuvada beni geç') : G.mode === 'daily' ? `${tr('Günlük çay')} · ${tr(G.mod.name)}` : tr('Kulemi geçebilir misin?');
   g.font = 'italic 600 54px Fraunces, Georgia, serif'; g.fillText(line, CW / 2, CH - 120);
   g.font = '700 34px Nunito, sans-serif'; g.globalAlpha = .85; g.fillText(CH_URL.replace(/^https:\/\//, '').replace(/\/$/, ''), CW / 2, CH - 62);
   return c;
@@ -2054,16 +2141,26 @@ function prepCard() {
     } catch (e) {}
   }, 350);
 }
+function wkShare() {
+  const n = wkBest(), file = G.state === 'over' && G.mode === 'week' ? G.card : null;
+  const text = n ? `${tr('Çay Kulesi haftalık turnuvası')}: ${n} ${tr('puan yaptım. Bu hafta herkes aynı bardaklarla oynuyor, beni geçebilir misin?')} 🍵`
+    : `${tr('Çay Kulesi haftalık turnuvası: bu hafta herkes aynı bardaklarla oynuyor')} 🍵`;
+  shareOut(text, wkLink(), file);
+}
+function shareOut(text, url, file) {
+  try {
+    if (file && navigator.share) { navigator.share({ files: [file], title: tr('Çay Kulesi'), text: text + ' ' + url }).catch(() => {}); return; }
+    if (navigator.share) { navigator.share({ title: tr('Çay Kulesi'), text, url }).catch(() => {}); return; }
+    navigator.clipboard.writeText(text + ' ' + url).then(() => toast(tr('Kopyalandı')), () => {});
+  } catch (e) {}
+}
 function share() {
+  if (G.mode === 'week') { wkShare(); return; }
   const ch = chShareable(), url = ch ? chLink(G.seed, G.score) : CH_URL;
   if (ch) { const m = seedList('ck_chmine'), k = G.seed.toString(36); if (!m.includes(k)) { m.push(k); store.set('ck_chmine', m.slice(-40).join(',')); } }
   const text = ch ? `${tr('Çay Kulesi')}: ${G.score} ${tr('puan yaptım. Aynı bardaklarla beni geçebilir misin?')} 🍵`
     : `${tr('Çay Kulesi')}: ${G.score} ${tr('puanlık kule diktim!')} 🍵`;
-  try {
-    if (G.card && navigator.share) { navigator.share({ files: [G.card], title: tr('Çay Kulesi'), text: text + ' ' + url }).catch(() => {}); return; }
-    if (navigator.share) { navigator.share({ title: tr('Çay Kulesi'), text, url }).catch(() => {}); return; }
-    navigator.clipboard.writeText(text + ' ' + url).then(() => toast(tr('Kopyalandı')), () => {});
-  } catch (e) {}
+  shareOut(text, url, G.card);
 }
 
 // ------------------------------------------------------------------ effects
@@ -2709,7 +2806,7 @@ function askInstall() {
 }
 
 window.addEventListener('pointerdown', (e) => {
-  const btn = e.target.closest && e.target.closest('button');
+  const btn = e.target.closest && e.target.closest('button, input');
   if (btn) return;
   if (G.state === 'paused') return;
   e.preventDefault();
@@ -2725,6 +2822,15 @@ $('reviveBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(
 $('dailyBtn').addEventListener('click', (e) => { e.stopPropagation(); if (G.state === 'title' && !G.panel) startGame('daily'); });
 document.querySelectorAll('#cupTabs button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); if (G.cupTab === b.dataset.t) return; G.cupTab = b.dataset.t; Snd.click(); renderCups(); }));
 $('cupsBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('cups'); });
+for (const id of ['weekBtn', 'weekChip']) $(id).addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('wk'); });
+$('wkPlay').addEventListener('click', (e) => { e.stopPropagation(); closePanel(); if (G.state === 'title' && !G.panel) startGame('week'); });
+$('wkInvite').addEventListener('click', (e) => { e.stopPropagation(); Snd.click(); wkShare(); });
+$('wkName').addEventListener('input', (e) => {
+  const v = cleanName(e.target.value);
+  if (v !== e.target.value) e.target.value = v;
+  if (NAME_RE.test(v.trim())) store.set('ck_name', v.trim());
+});
+$('wkName').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 $('giftBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('gift'); });
 $('achBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('ach'); });
 $('setBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); openPanel('set'); });
@@ -2732,7 +2838,7 @@ $('setBtnP').addEventListener('click', (e) => { e.stopPropagation(); Snd.click()
 document.querySelectorAll('.set-row[data-k]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); if (G.state !== 'paused') Snd.init(); toggleSet(b.dataset.k); }));
 document.querySelectorAll('#gfxSeg button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); setGfx(b.dataset.v); }));
 $('tutBtn').addEventListener('click', (e) => { e.stopPropagation(); G.tutorial = true; G.tutDone = 0; store.set('ck_tut', '0'); Snd.click(); renderSet(); });
-for (const id of ['cupsClose', 'giftClose', 'achClose', 'setClose']) $(id).addEventListener('click', (e) => { e.stopPropagation(); closePanel(); });
+for (const id of ['cupsClose', 'giftClose', 'achClose', 'setClose', 'wkClose']) $(id).addEventListener('click', (e) => { e.stopPropagation(); closePanel(); });
 $('claimBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); claimGift(); });
 $('spinBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); askSpin(); });
 $('shareBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
@@ -2748,7 +2854,7 @@ $('chBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); S
 $('chX').addEventListener('click', (e) => { e.stopPropagation(); Snd.click(); G.ch = null; G.mode = 'classic'; refreshTitle(); });
 for (const id of ['installBtn', 'installBtnO']) $(id).addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); askInstall(); });
 window.addEventListener('keydown', (e) => {
-  if (e.repeat) return;
+  if (e.repeat || (e.target && e.target.tagName === 'INPUT')) return;
   if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); if (G.state === 'paused') resume(); else { Snd.init(); tap(); } }
   else if (e.code === 'KeyP' || e.code === 'Escape') { if (G.panel) closePanel(); else G.state === 'paused' ? resume() : pause(); }
   else if (e.code === 'KeyM') { Snd.init(); Snd.toggle(); syncMute(); }
@@ -2802,7 +2908,7 @@ window.__game = {
   get sugar() { return Wallet.n; }, addSugar(k) { Wallet.add(k); }, get panel() { return G.panel; }, openPanel, closePanel,
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
   get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get xp() { return { ...lvOf(XP.n), n: XP.n, paid: XP.paid, rank: rankOf(lvOf(XP.n).l) }; }, get boost() { return { ...G.boost }; }, get boostSel() { return [...G.boostSel]; }, toggleBoost: (k) => toggleBoost(k, $('boostRow')), get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
-  start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR, shareCard, get card() { return G.card; }, get evLog() { return G.evLog.join(','); },
+  start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR, shareCard, get card() { return G.card; }, get evLog() { return G.evLog.join(','); }, get wk() { return { best: wkBest(), seed: wkSeed(), fr: wkFriends(), name: myName(), link: wkLink() }; },
   setTimeScale(s) { G.timeScale = s; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
   // tam ortada bırakmak için askıyı ortaya kadar ilerlet
@@ -2825,10 +2931,14 @@ $('titleBest').querySelector('b').textContent = G.best;
 ST.bestScore = Math.max(ST.bestScore, G.best); ST.dailyBest = Math.max(ST.dailyBest, dailyStreak());
 saveStats(); checkAch();
 G.ch = readChallenge(); if (G.ch) G.mode = 'challenge';
+const wl = readWeekLink();
+if (wl && wl.w === wkNum()) { wkAddFriend(wl.nm, wl.n); G.wkOpen = true; } else if (wl) setTimeout(() => toast(tr('Bu link geçen haftanın turnuvasından')), 900);
+show('weekBtn', !window.PF); show('weekChip', !window.PF);
 refreshTitle();
 demoTower();
 // günün ilk açılışında hediye paneli kendiliğinden gelsin (meydan okuma linkiyle gelen önce onu görsün)
-if (!loginState().claimed && !G.ch) setTimeout(() => openPanel('gift'), 700);
+if (G.wkOpen) setTimeout(() => openPanel('wk'), 700);
+else if (!loginState().claimed && !G.ch) setTimeout(() => openPanel('gift'), 700);
 G.cam.y = G.cam.ty = camMinY() - H * .07 / S; G.cam.x = 0;
 requestAnimationFrame(frame);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {});

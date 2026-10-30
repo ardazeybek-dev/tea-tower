@@ -56,11 +56,15 @@
   </div>
   <div class="bottom">
     <p class="tag">İnce belli bardakları üst üste diz.<br>Tam ortaya denk getir, kule parlasın.</p>
-    <div class="best-chip" id="titleBest">En iyi <b>0</b></div>
+    <div class="chip-row">
+      <div class="best-chip" id="titleBest">En iyi <b>0</b></div>
+      <button id="weekChip" class="best-chip wk-chip hidden"><span>Haftalık</span> <small id="weekChipSub"></small></button>
+    </div>
     <div class="best-chip ch-chip hidden" id="chChip"><span>Arkadaşın</span> <b id="chTarget">0</b> <span>puan yaptı</span><button id="chX" aria-label="Meydan okumayı kapat">×</button></div>
     <div class="cta"><span class="dot"></span><span id="ctaTxt">Başlamak için dokun</span></div>
     <div class="modes">
       <button id="dailyBtn" class="mode-btn"><b>Günlük çay</b><small id="dailySub"></small></button>
+      <button id="weekBtn" class="mode-btn hidden"><b>Haftalık</b><small id="weekSub"></small></button>
       <button id="cupsBtn" class="mode-btn"><b>Koleksiyon</b><small>Bardak · mekân</small></button>
       <button id="giftBtn" class="mode-btn"><b>Hediye</b><small id="giftSub">Çark ve seri</small></button>
       <button id="achBtn" class="mode-btn"><b>Görevler</b><small id="achSub"></small></button>
@@ -139,6 +143,18 @@
       <button class="set-row" id="tutBtn"><span><b>Öğreticiyi göster</b><small id="tutNote">Bir sonraki elde ipucu</small></span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
     </div>
     <button id="setClose" class="btn primary">Kapat</button>
+  </div>
+</div>
+
+<div id="wk" class="screen dim hidden">
+  <div class="panel ach-panel">
+    <div class="eyebrow">Herkes aynı bardaklarla</div>
+    <h2>Haftalık turnuva</h2>
+    <div class="ach-list" id="wkList"></div>
+    <label class="wk-name"><span>Adın</span><input id="wkName" maxlength="12" autocomplete="off" spellcheck="false" enterkeyhint="done"></label>
+    <button id="wkPlay" class="btn primary">Oyna</button>
+    <button id="wkInvite" class="btn ghost tight">Arkadaşlarını çağır</button>
+    <button id="wkClose" class="btn ghost tight">Kapat</button>
   </div>
 </div>
 
