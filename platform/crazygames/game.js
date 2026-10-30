@@ -355,6 +355,23 @@ function makeGlow(color) {
   gr.addColorStop(0, rgb(color, 1)); gr.addColorStop(.25, rgb(color, .45)); gr.addColorStop(1, rgb(color, 0));
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return c;
 }
+// güneş/ay ışığı: geniş hale + dar korona; merkeze yaklaştıkça renk beyaza doyar, kenarda vaktin rengi kalır.
+// birim boyut: yarıçap = 6 güneş yarıçapı; renk değişince yeniden boyanır (vakit geçişinde birkaç kare)
+const SUNL = { c: null, key: '' };
+function sunLight(sun, glow) {
+  const key = rgb(sun) + rgb(glow);
+  if (SUNL.key === key) return SUNL.c;
+  if (!SUNL.c) SUNL.c = mk(256, 256);
+  const g = SUNL.c.getContext('2d'), w = [255, 255, 255];
+  g.clearRect(0, 0, 256, 256);
+  let gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, rgb(mixc(glow, w, .35), .5)); gr.addColorStop(.18, rgb(glow, .3)); gr.addColorStop(.45, rgb(glow, .1)); gr.addColorStop(1, rgb(glow, 0));
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  gr = g.createRadialGradient(128, 128, 0, 128, 128, 128 / 6 * 1.9);
+  gr.addColorStop(0, rgb(mixc(sun, w, .6), .9)); gr.addColorStop(.5, rgb(mixc(sun, glow, .4), .35)); gr.addColorStop(1, rgb(mixc(sun, glow, .5), 0));
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  SUNL.key = key; return SUNL.c;
+}
 function makeSpark() {
   const c = mk(64, 64), g = c.getContext('2d');
   const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -1072,7 +1089,7 @@ const G = {
   state: 'title', prev: null, t: 0, timeScale: 1, slow: 1,
   pieces: [], score: 0, best: parseInt(store.get('ck_best', '0'), 10) || 0, combo: 0, maxCombo: 0, perfects: 0,
   hang: null, drop: null, topple: null, bodies: [], risk: 0, warned: false, recordShown: false,
-  cam: { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 }, trauma: 0, zk: 0, flash: 0,
+  cam: { x: 0, y: 0, z: 1, tx: 0, ty: 0, tz: 1 }, trauma: 0, zk: 0, dim: 0, flash: 0,
   phase: 0, phaseFrom: 0, phaseT: 1, overAt: 0, spawnIn: 0, lastGolden: false,
   tutorial: store.get('ck_tut', '0') !== '1', tutDone: 0,
   mode: 'classic', mod: null, ph0: 0, seed: 1, ch: null, boost: {}, boostSel: new Set(), boosted: false, revived: false, panel: null, offerRevive: false, runSugar: 0,
@@ -1350,7 +1367,7 @@ function hangPos(h) {
 
 function resetWorld() {
   G.pieces.length = 0; G.bodies.length = 0; parts.length = 0; rings.length = 0; floaters.length = 0;
-  G.drop = null; G.topple = null; G.score = 0; G.combo = 0; G.maxCombo = 0; G.perfects = 0; G.risk = 0; G.warned = false; G.recordShown = false;
+  G.drop = null; G.topple = null; G.dim = 0; G.score = 0; G.combo = 0; G.maxCombo = 0; G.perfects = 0; G.risk = 0; G.warned = false; G.recordShown = false;
   G.lastGolden = false; G.revived = false; G.offerRevive = false; G.runSugar = 0;
   G.recCrossed = false; G.recT = 0; G.mile = 0; G.chBeat = false; G.boost = {}; G.boosted = false; G.runXp = 0;
   G.wind = null; G.evCd = 0; G.evLog = []; G.fgGull = null;
@@ -2094,9 +2111,9 @@ function shareCard() {
   gr.addColorStop(0, rgb(P.skyTop)); gr.addColorStop(.42, rgb(P.skyMid)); gr.addColorStop(.72, rgb(P.skyBot)); gr.addColorStop(1, rgb(P.skyBot));
   g.fillStyle = gr; g.fillRect(0, 0, CW, CH);
   const sx = P.sx * CW, sy = P.sy * CH * .85, sr = P.sr * u;
-  g.globalCompositeOperation = 'lighter'; g.globalAlpha = .55; g.drawImage(tinted(SPR.softM, P.glow), sx - sr * 6, sy - sr * 6, sr * 12, sr * 12);
+  g.globalCompositeOperation = 'lighter'; g.globalAlpha = 1 - P.night * .3; g.drawImage(sunLight(P.sun, P.glow), sx - sr * 6, sy - sr * 6, sr * 12, sr * 12);
   g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
-  g.fillStyle = rgb(P.sun); g.beginPath(); g.arc(sx, sy, sr, 0, TAU); g.fill();
+  g.fillStyle = rgb(mixc(P.sun, [255, 255, 255], .3)); g.beginPath(); g.arc(sx, sy, sr, 0, TAU); g.fill();
   // ufuk tuvali ekranın birimiyle (S*DPR) çizilmiş; kartın birimine ölçekle
   const o = horizonFor(G.phase), k0 = u / (S * DPR), hw = o.c.width * k0, hh = o.c.height * k0, ty = CH * .62 - BG.bh * k0 + 2;
   g.drawImage(o.c, (CW - hw) / 2, ty, hw, hh);
@@ -2291,6 +2308,7 @@ function update(dt) {
   const k = 1 - Math.exp(-dt * 3.2);
   c.x = lerp(c.x, c.tx, k); c.y = lerp(c.y, c.ty, k); c.z = lerp(c.z, c.tz, 1 - Math.exp(-dt * 2.2));
   G.flash *= Math.exp(-dt * 5);
+  G.dim = G.state === 'toppling' ? Math.min(.7, G.dim + dt * 2.5) : G.dim * Math.exp(-dt * 1.2);
   // vapur & martılar
   for (const b of balloons) { b.x += b.v * dt; b.ph += dt * .3; if (b.x > 1.15) b.x = -.15; }
   for (const m of motes) { m.v += dt * .012 * m.sp; m.w += Math.sin(G.t * .4 + m.ph) * dt * .03; if (m.v > 1) { m.v = 0; m.w = Math.random() * 2 - 1; } }
@@ -2352,9 +2370,9 @@ function drawBackground(P) {
   const sx = P.sx * W + hx * .3, sy = P.sy * H + rise * .12, sr = P.sr * S;
   SUN.x = sx; SUN.y = sy;
   ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = .55; ctx.drawImage(tinted(SPR.softM, P.glow), sx - sr * 6, sy - sr * 6, sr * 12, sr * 12);
+  ctx.globalAlpha = 1 - P.night * .3; ctx.drawImage(sunLight(P.sun, P.glow), sx - sr * 6, sy - sr * 6, sr * 12, sr * 12);
   ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = rgb(P.sun); ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
+  ctx.fillStyle = rgb(mixc(P.sun, [255, 255, 255], .3)); ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
   if (P.night > .7) {
     const top = mixc(P.skyTop, [14, 18, 48], alt * .55), mid = mixc(P.skyMid, P.skyTop, alt * .6);
     ctx.fillStyle = rgb(mixc(top, mid, clamp(sy / (H * .42), 0, 1)), clamp((P.night - .7) * 3.4, 0, 1));
@@ -2383,10 +2401,20 @@ function drawBackground(P) {
     ctx.drawImage(cb.c, ox, ty, bw, ch); ctx.globalAlpha = 1;
     if (ty + ch < H) { ctx.fillStyle = rgb(ca ? mixc(ca.low, cb.low, ta) : cb.low); ctx.fillRect(0, ty + ch - 1, W, H - ty - ch + 1); }
     if (nt > .05) {
+      const ws = 1.2 * S, gs = 9 * S, glow = !eco();
       for (const w of BG.wins) {
-        const f = .6 + .4 * Math.sin(G.t * .7 + w[2] * 30);
-        ctx.fillStyle = `rgba(255,${200 + w[2] * 40 | 0},120,${nt * f * (w[2] > .3 ? .95 : .4)})`;
-        ctx.fillRect(ox + w[0] / DPR, ty + w[1] / DPR, 1.6 * S, 1.6 * S);
+        const f = .6 + .4 * Math.sin(G.t * .7 + w[2] * 30), wx = ox + w[0] / DPR, wy = ty + w[1] / DPR;
+        ctx.fillStyle = `rgba(255,${210 + w[2] * 40 | 0},140,${nt * f * (w[2] > .3 ? .95 : .4)})`;
+        ctx.fillRect(wx, wy, ws, ws);
+      }
+      if (glow) {
+        ctx.globalCompositeOperation = 'lighter';
+        for (const w of BG.wins) {
+          if (w[2] <= .3) continue;
+          ctx.globalAlpha = nt * (.6 + .4 * Math.sin(G.t * .7 + w[2] * 30)) * .28;
+          ctx.drawImage(SPR.warm, ox + w[0] / DPR + ws / 2 - gs / 2, ty + w[1] / DPR + ws / 2 - gs / 2, gs, gs);
+        }
+        ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
       }
     }
     const hz = hazeOf(P);
@@ -2686,6 +2714,7 @@ function render() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalCompositeOperation = 'multiply';
   ctx.drawImage(gradeOverlay(P.grade), 0, 0, cv.width, cv.height);
+  if (G.dim > .01) { ctx.globalAlpha = G.dim; ctx.drawImage(gradeOverlay(P.grade), 0, 0, cv.width, cv.height); ctx.globalAlpha = 1; }
   ctx.globalCompositeOperation = 'lighter';
   const dk = phaseW(1) + phaseW(3) * .7;
   if (dk > .02) drawDust(P, dk);
@@ -2929,7 +2958,7 @@ window.__game = {
   get ach() { return [...achDone]; }, get login() { return loginState(); }, get spins() { return spinState(); },
   get offerRevive() { return G.offerRevive; }, get seed() { return G.seed; }, get xp() { return { ...lvOf(XP.n), n: XP.n, paid: XP.paid, rank: rankOf(lvOf(XP.n).l) }; }, get boost() { return { ...G.boost }; }, get boostSel() { return [...G.boostSel]; }, toggleBoost: (k) => toggleBoost(k, $('boostRow')), get seq() { return G.pieces.map((p) => p.tea + (p.golden ? 'g' : '')).join(''); }, get ch() { return G.ch; }, chLink, setCh(c) { G.ch = c; G.mode = c ? 'challenge' : 'classic'; refreshTitle(); }, get week() { return week(); }, get bestH0() { return G.bestH0; },
   start: (m) => startGame(m), tap: () => tap(), pause, resume, home: goHome, _spr: () => SPR, shareCard, get card() { return G.card; }, get evLog() { return G.evLog.join(','); }, get wk() { return { best: wkBest(), seed: wkSeed(), fr: wkFriends(), name: myName(), link: wkLink() }; },
-  setTimeScale(s) { G.timeScale = s; },
+  setTimeScale(s) { G.timeScale = s; }, get fx() { return { trauma: G.trauma, zk: G.zk, hitStop, slowMo }; },
   step(dt, n) { n = n || 1; for (let i = 0; i < n; i++) update(dt); render(); },
   // tam ortada bırakmak için askıyı ortaya kadar ilerlet
   aimPerfect(maxSteps) {
