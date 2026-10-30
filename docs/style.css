@@ -313,7 +313,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .boost-row button[aria-pressed="true"]{background:linear-gradient(180deg,#ffe9a8,#f4c95d);border-color:#d9a03a;box-shadow:0 4px 12px rgba(200,140,40,.3)}
 .boost-row button.poor{opacity:.45}
 @media (max-height:700px){.boost-row small{display:none}.boost-row button{padding:6px 4px}}
-@media (max-height:760px){#over.offer .boosts{display:none}}
+#over.offer .boosts{display:none}
 /* çaycı rütbesi: başlıkta seviye rozeti, ilerleme numaranın etrafında halka */
 .top-l{display:flex;align-items:center;gap:8px;min-width:0}
 .rank{display:flex;align-items:center;gap:7px;height:44px;padding:0 4px;border-radius:99px;background:var(--glass);border:1px solid var(--line);color:inherit;min-width:44px}

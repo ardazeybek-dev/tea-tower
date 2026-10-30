@@ -1215,12 +1215,13 @@ function readChallenge() {
   if (!(seed > 0 && seed < 2147483648 && target > 0 && target <= 5000 && chSum(seed, target) === parseInt(m[3], 36))) return null;
   return { seed, target, done: false };
 }
-// kazanma ödülü tohum başına bir kez ve yalnızca gerçek bir hedefte (elle yazılmış ?c=…1 linkleri şeker basmasın)
-const CH_PRIZE = 30;
+// kazanma ödülü: gerçek bir hedefte, tohum başına bir kez, günde en çok 3 kez ve kendi gönderdiği linke değil (kendine meydan okuyup şeker kasılmasın)
+const CH_PRIZE = 30, CH_DAY = 3;
+const seedList = (k) => store.get(k, '').split(',').filter(Boolean);
 function chReward() {
-  const k = G.ch.seed.toString(36), won = store.get('ck_chwon', '').split(',').filter(Boolean);
-  if (G.ch.target < 10 || won.includes(k)) return 0;
-  won.push(k); store.set('ck_chwon', won.slice(-40).join(','));
+  const k = G.ch.seed.toString(36), won = seedList('ck_chwon'), d = readPair('ck_chday'), today = d.key === dayKey() ? d.n : 0;
+  if (G.ch.target < 10 || won.includes(k) || seedList('ck_chmine').includes(k) || today >= CH_DAY) return 0;
+  won.push(k); store.set('ck_chwon', won.slice(-40).join(',')); store.set('ck_chday', dayKey() + '|' + (today + 1));
   ST.chWins = (ST.chWins || 0) + 1; saveStats();
   G.runSugar += CH_PRIZE; Wallet.add(CH_PRIZE);
   return CH_PRIZE;
@@ -1534,7 +1535,7 @@ function setOffer(on) {
 function rewardReady() { return !window.PF || !window.PF.canReward || window.PF.canReward(); }
 function revive() {
   if (G.state !== 'over' || G.revived) return;
-  G.revived = true; G.offerRevive = false; G.bodies.length = 0; G.topple = null; G.toOverIn = 0; G.slow = 1;
+  G.revived = true; G.offerRevive = false; G.boostSel.clear(); G.bodies.length = 0; G.topple = null; G.toOverIn = 0; G.slow = 1;
   straighten(.35); G.risk = stability().risk; G.warned = false; G.combo = 0;
   G.state = 'playing';
   show('over', false); show('hud', true);
@@ -1966,6 +1967,7 @@ function nextToast() {
 }
 function share() {
   const ch = chShareable(), url = ch ? chLink(G.seed, G.score) : CH_URL;
+  if (ch) { const m = seedList('ck_chmine'), k = G.seed.toString(36); if (!m.includes(k)) { m.push(k); store.set('ck_chmine', m.slice(-40).join(',')); } }
   const text = ch ? `${tr('Çay Kulesi')}: ${G.score} ${tr('puan yaptım. Aynı bardaklarla beni geçebilir misin?')} 🍵`
     : `${tr('Çay Kulesi')}: ${G.score} ${tr('puanlık kule diktim!')} 🍵`;
   try {
@@ -2616,6 +2618,8 @@ $('rank').addEventListener('click', (e) => {
   const v = lvOf(XP.n);
   toast(`${tr(rankOf(v.l))} · ${tr('Seviye')} ${v.l} · <em>${v.need - v.x} XP</em> ${tr('kaldı')}`);
 });
+// çiplerin arasındaki boşluğa dokunmak yeni eli güçsüz başlatmasın
+$('boosts').addEventListener('pointerdown', (e) => e.stopPropagation());
 $('boostRow').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; e.stopPropagation(); Snd.init(); toggleBoost(b.dataset.k, b); });
 $('chBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); Snd.click(); share(); });
 $('chX').addEventListener('click', (e) => { e.stopPropagation(); Snd.click(); G.ch = null; G.mode = 'classic'; refreshTitle(); });
