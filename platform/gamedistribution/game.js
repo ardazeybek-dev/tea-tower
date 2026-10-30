@@ -2741,8 +2741,8 @@ function drawRain(P) {
   const w = WX;
   if (w.k !== 'rain' || w.a <= 0 || w.sl === undefined) return;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.strokeStyle = P.night > .5 ? `rgba(190,205,235,${.3 * w.a})` : `rgba(225,232,242,${.32 * w.a})`;
-  ctx.lineWidth = .9 * S; ctx.lineCap = 'round'; ctx.beginPath();
+  ctx.strokeStyle = P.night > .5 ? `rgba(190,205,235,${.38 * w.a})` : `rgba(225,232,242,${.42 * w.a})`;
+  ctx.lineWidth = Math.max(1, .9 * S); ctx.lineCap = 'round'; ctx.beginPath();
   const n = Math.min(w.drops.length, eco() ? 45 : 110), L = 16 * S, sl = w.sl;
   for (let i = 0; i < n; i++) { const d = w.drops[i], x = d.x * W, y = d.y * H, l = L * d.l; ctx.moveTo(x, y); ctx.lineTo(x - sl * l, y - l); }
   ctx.stroke();
