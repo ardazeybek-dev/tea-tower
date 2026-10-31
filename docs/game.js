@@ -1909,6 +1909,35 @@ function setGfx(v) {
 function openCups() { openPanel('cups'); }
 function closeCups() { if (G.panel === 'cups') closePanel(); }
 // koleksiyon iki sekme: bardaklar | mekânlar
+// günün fırsatı: sahip olunmayan bir bardak ya da mekân %40 indirimli. Tarihten seçilir (oyun akışlarından değil),
+// gün boyunca aynı kalır; satın alınınca o gün yenisi gelmez.
+const DEAL_OFF = .4;
+function deal() {
+  const day = dayKey(), p = store.get('ck_deal', '').split('|');
+  if (p[0] === day) return p[1] ? { k: p[1], i: +p[2] } : null;
+  const pool = [];
+  SKINS.forEach((s, i) => { if (s.price && !skinOpen(i)) pool.push({ k: 's', i }); });
+  VENUES.forEach((v, i) => { if (v.price && !venueOpen(i)) pool.push({ k: 'v', i }); });
+  const d = pool.length ? pool[(Math.imul(+day.replace(/-/g, ''), 2654435761) >>> 0) % pool.length] : null;
+  store.set('ck_deal', day + '|' + (d ? d.k + '|' + d.i : ''));
+  return d;
+}
+const isDeal = (k, i) => { const d = deal(); return !!d && d.k === k && d.i === i; };
+function priceOf(k, i) { const base = (k === 's' ? SKINS : VENUES)[i].price; return isDeal(k, i) ? Math.round(base * (1 - DEAL_OFF) / 5) * 5 : base; }
+function priceHtml(k, i) {
+  const base = (k === 's' ? SKINS : VENUES)[i].price, p = priceOf(k, i);
+  return `<svg><use href="#i-sugar"/></svg>` + (p < base ? `<s>${base}</s>${p}` : `${p}`);
+}
+function dealNote() {
+  const d = deal(); if (!d) return '';
+  const it = (d.k === 's' ? SKINS : VENUES)[d.i];
+  return (d.k === 's' ? skinOpen(d.i) : venueOpen(d.i)) ? '' : ` · ${tr('Günün fırsatı')}: ${tr(it.name)}`;
+}
+function dealTag(b, k, i) {
+  if (!isDeal(k, i)) return;
+  b.classList.add('deal');
+  const t = document.createElement('em'); t.className = 'deal-tag'; t.textContent = tr('%40 indirim'); b.append(t);
+}
 function renderCups(note) {
   const venues = G.cupTab === 'venues';
   document.querySelectorAll('#cupTabs button').forEach((b) => b.setAttribute('aria-pressed', (b.dataset.t === 'venues') === venues ? 'true' : 'false'));
@@ -1916,20 +1945,21 @@ function renderCups(note) {
   $('cupTabs').classList.toggle('dot-v', VENUES.some((v, i) => i > 0 && venueOpen(i) && store.get('ck_vseen' + i, '0') !== '1'));
   if (venues) { renderVenues(note); return; }
   const grid = $('cupGrid'); grid.textContent = ''; grid.className = 'cup-grid';
-  $('cupTotal').textContent = note || `${tr('Toplam')} ${G.total} ${tr('bardak')}`;
+  $('cupTotal').textContent = note || `${tr('Toplam')} ${G.total} ${tr('bardak')}` + dealNote();
   SKINS.forEach((s, i) => {
     const open = skinOpen(i);
     if (open) store.set('ck_seen' + i, '1');
     const b = document.createElement('button');
-    b.className = 'cup' + (open ? '' : ' locked') + (!open && Wallet.n >= s.price ? ' buy' : '') + (G.skin === i ? ' on' : '');
+    b.className = 'cup' + (open ? '' : ' locked') + (!open && Wallet.n >= priceOf('s', i) ? ' buy' : '') + (G.skin === i ? ' on' : '');
     b.setAttribute('aria-pressed', G.skin === i ? 'true' : 'false');
     const sp = makeGlass(TEA[1], false, i), c = document.createElement('canvas');
     c.width = sp.c.width; c.height = sp.c.height; c.getContext('2d').drawImage(sp.c, 0, 0);
     const name = document.createElement('b'); name.textContent = tr(s.name);
     const sub = document.createElement('span');
     if (open) sub.textContent = G.skin === i ? tr('Seçili') : '';
-    else { sub.className = 'price'; sub.innerHTML = `<svg><use href="#i-sugar"/></svg>${s.price}`; }
+    else { sub.className = 'price'; sub.innerHTML = priceHtml('s', i); }
     b.append(c, name, sub);
+    if (!open) dealTag(b, 's', i);
     b.addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); if (open) { selectSkin(i); Snd.click(); } else buySkin(i, b); });
     grid.append(b);
   });
@@ -1958,27 +1988,28 @@ function venueThumb(i) {
 }
 function renderVenues(note) {
   const grid = $('cupGrid'); grid.textContent = ''; grid.className = 'venue-grid';
-  $('cupTotal').textContent = note || `${tr('Toplam')} ${G.total} ${tr('bardak')}`;
+  $('cupTotal').textContent = note || `${tr('Toplam')} ${G.total} ${tr('bardak')}` + dealNote();
   VENUES.forEach((v, i) => {
     const open = venueOpen(i);
     if (open) store.set('ck_vseen' + i, '1');
     const b = document.createElement('button');
-    b.className = 'venue' + (open ? '' : ' locked') + (!open && Wallet.n >= v.price ? ' buy' : '') + (G.venue === i ? ' on' : '');
+    b.className = 'venue' + (open ? '' : ' locked') + (!open && Wallet.n >= priceOf('v', i) ? ' buy' : '') + (G.venue === i ? ' on' : '');
     b.setAttribute('aria-pressed', G.venue === i ? 'true' : 'false');
     const name = document.createElement('b'); name.textContent = tr(v.name);
     const sub = document.createElement('span');
     if (open) sub.textContent = G.venue === i ? tr('Seçili') : tr(v.sub);
-    else { sub.className = 'price'; sub.innerHTML = `<svg><use href="#i-sugar"/></svg>${v.price} <i>· ${v.need} ${tr('bardak')}</i>`; }
+    else { sub.className = 'price'; sub.innerHTML = `${priceHtml('v', i)} <i>· ${v.need} ${tr('bardak')}</i>`; }
     b.append(venueThumb(i), name, sub);
+    if (!open) dealTag(b, 'v', i);
     b.addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); if (open) { selectVenue(i); Snd.click(); } else buyVenue(i, b); });
     grid.append(b);
   });
 }
 function buyVenue(i, el) {
-  const v = VENUES[i];
-  if (!Wallet.spend(v.price)) {
+  const v = VENUES[i], price = priceOf('v', i);
+  if (!Wallet.spend(price)) {
     el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); Snd.click(); vibrate(30);
-    $('cupTotal').textContent = `${v.price - Wallet.n} ${tr('şeker daha lazım')} · ${tr('ya da')} ${v.need - G.total} ${tr('bardak')}`;
+    $('cupTotal').textContent = `${price - Wallet.n} ${tr('şeker daha lazım')} · ${tr('ya da')} ${v.need - G.total} ${tr('bardak')}`;
     return;
   }
   vowned.add(i); store.set('ck_vowned', [...vowned].join(','));
@@ -1986,10 +2017,10 @@ function buyVenue(i, el) {
   selectVenue(i); checkAch();
 }
 function buySkin(i, el) {
-  const s = SKINS[i];
-  if (!Wallet.spend(s.price)) {
+  const s = SKINS[i], price = priceOf('s', i);
+  if (!Wallet.spend(price)) {
     el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); Snd.click(); vibrate(30);
-    $('cupTotal').textContent = `${s.price - Wallet.n} ${tr('şeker daha lazım')}` + (s.need ? ` · ${tr('ya da')} ${s.need - G.total} ${tr('bardak')}` : '');
+    $('cupTotal').textContent = `${price - Wallet.n} ${tr('şeker daha lazım')}` + (s.need ? ` · ${tr('ya da')} ${s.need - G.total} ${tr('bardak')}` : '');
     return;
   }
   owned.add(i); store.set('ck_owned', [...owned].join(','));
