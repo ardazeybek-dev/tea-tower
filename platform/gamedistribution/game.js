@@ -2861,16 +2861,19 @@ function drawDust(P, k) {
 }
 // hava durumu: yalnız görsel. mekân + günün tarihinden seçilir; oyunun rng()/evRng()'sine dokunmaz,
 // meydan okuma ve haftalık turnuva herkes için aynı kalır
-const WX_ODDS = { bogaz: [.45, .3, .1, .15], rize: [.2, .25, .3, .25], kapadokya: [.65, .3, .05, 0], bodrum: [.75, .2, 0, .05] };
-const WX_KINDS = ['clear', 'cloudy', 'mist', 'rain'];
-const WX = { key: '', k: 'clear', a: 0, force: null, drops: [] };
+// mevsim gerçek takvimi izler: kışın kar (Bodrum hariç, en çok Kapadokya), sonbaharda daha çok yağmur, yazın çoğunlukla açık
+const WX_ODDS = { bogaz: [.45, .3, .1, .15, .3], rize: [.2, .25, .3, .25, .3], kapadokya: [.65, .3, .05, 0, .55], bodrum: [.75, .2, 0, .05, 0] };
+const WX_SEASON = [[.7, 1.2, 1, .8, 1], [1, 1, 1, 1, 0], [1.4, .8, .5, .4, 0], [.8, 1.1, 1.1, 1.6, 0]];   // kış, ilkbahar, yaz, sonbahar
+const WX_KINDS = ['clear', 'cloudy', 'mist', 'rain', 'snow'];
+const WX = { key: '', k: 'clear', a: 0, force: null, drops: [], flakes: [] };
 function weatherNow() {
   const v = VENUES[G.venue], key = dayKey() + v.id + (WX.force || '');
   if (WX.key !== key) {
     let h = 2166136261; for (const ch of key) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
-    let r = (h >>> 0) / 4294967296, i = 0;
-    const odds = WX_ODDS[v.id] || WX_ODDS.bogaz;
-    while (i < 3 && r >= odds[i]) { r -= odds[i]; i++; }
+    const sea = WX_SEASON[Math.floor((new Date().getMonth() + 1) % 12 / 3)];
+    const odds = (WX_ODDS[v.id] || WX_ODDS.bogaz).map((o, j) => o * sea[j]), sum = odds.reduce((a, b) => a + b, 0);
+    let r = (h >>> 0) / 4294967296 * sum, i = 0;
+    while (i < odds.length - 1 && r >= odds[i]) { r -= odds[i]; i++; }
     const k = WX.force || WX_KINDS[i];
     if (k !== WX.k) WX.a = 0;
     WX.k = k; WX.key = key;
@@ -2880,6 +2883,18 @@ function weatherNow() {
 function updateWeather(dt) {
   const w = weatherNow();
   w.a = Math.min(1, w.a + dt / 1.5);
+  if (w.k === 'snow') {
+    // iri, yakın taneler daha hızlı düşer; hepsi kendi salınımıyla süzülür, rüzgârda yana kayar
+    const n = eco() ? 50 : 120, push = G.wind ? G.wind.dir * .35 * Math.min(1, G.wind.t * 2) : 0;
+    while (w.flakes.length < n) w.flakes.push({ x: Math.random(), y: Math.random(), v: rand(.6, 1.4), r: rand(.6, 1.5), ph: rand(0, TAU) });
+    for (let i = 0; i < n; i++) {
+      const f = w.flakes[i], dy = dt * .1 * f.v * (.6 + f.r * .4);
+      f.y += dy; f.x += (Math.sin(G.t * 1.3 + f.ph) * .02 + push) * dt * f.r;
+      if (f.y > 1.03) { f.y -= 1.06; f.x = Math.random() * 1.2 - .1; }
+      if (f.x < -.05) f.x += 1.1; else if (f.x > 1.05) f.x -= 1.1;
+    }
+    return;
+  }
   if (w.k !== 'rain') return;
   const n = eco() ? 45 : 110;
   while (w.drops.length < n) w.drops.push({ x: Math.random(), y: Math.random(), v: rand(.8, 1.2), l: rand(.7, 1.3) });
@@ -2908,13 +2923,38 @@ function drawWeatherBack(P) {
     for (let i = 0; i < 3; i++) { const x = ((G.t * (4 + i * 2) + i * 260) % (W + 600)) - 300, y = H * (.56 + i * .04); ctx.drawImage(mt, x - 300 * S, y - 26 * S, 600 * S, 52 * S); }
     ctx.globalAlpha = 1;
   }
+  if (w.k === 'snow') {
+    // karlı gök: soğuk, süt beyazı bir perde; ufuk tarafı daha yoğun
+    const sc = mixc([214, 220, 232], P.skyMid, .3 + nt * .45);
+    const gr = ctx.createLinearGradient(0, 0, 0, H);
+    gr.addColorStop(0, rgb(sc, .3 * a)); gr.addColorStop(.6, rgb(sc, .42 * a)); gr.addColorStop(1, rgb(sc, .2 * a));
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+  }
   if (w.k === 'cloudy' || w.k === 'rain') {
     const cc = w.k === 'rain' ? mixc([112, 122, 142], P.skyMid, .35 + nt * .4) : mixc([168, 172, 182], P.skyMid, .4 + nt * .4);
     ctx.fillStyle = rgb(cc, (w.k === 'rain' ? .34 : .22) * a); ctx.fillRect(0, 0, W, H);
   }
 }
+function drawSnow(P) {
+  const w = WX;
+  if (w.k !== 'snow' || w.a <= 0 || !w.flakes.length) return;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const n = Math.min(w.flakes.length, eco() ? 50 : 120), R = 2.4 * S;
+  // iki geçiş: uzaktaki küçük taneler soluk, yakındakiler parlak (tek path, tek fill)
+  for (const near of [false, true]) {
+    ctx.fillStyle = P.night > .5 ? `rgba(220,228,245,${(near ? .85 : .5) * w.a})` : `rgba(255,255,255,${(near ? .92 : .55) * w.a})`;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const f = w.flakes[i]; if ((f.r > 1.1) !== near) continue;
+      const x = f.x * W, y = f.y * H, r = R * f.r;
+      ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, TAU);
+    }
+    ctx.fill();
+  }
+}
 function drawRain(P) {
   const w = WX;
+  if (w.k === 'snow') { drawSnow(P); return; }
   if (w.k !== 'rain' || w.a <= 0 || w.sl === undefined) return;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.strokeStyle = P.night > .5 ? `rgba(190,205,235,${.38 * w.a})` : `rgba(225,232,242,${.42 * w.a})`;
@@ -2926,7 +2966,7 @@ function drawRain(P) {
 function weatherGrade(gc) {
   const w = WX;
   if (w.k === 'clear' || w.a <= 0) return gc;
-  const t = w.k === 'rain' ? [186, 196, 216, .16] : w.k === 'mist' ? [232, 232, 236, .06] : [214, 216, 224, .1], a = w.a;
+  const t = w.k === 'rain' ? [186, 196, 216, .16] : w.k === 'snow' ? [226, 232, 246, .12] : w.k === 'mist' ? [232, 232, 236, .06] : [214, 216, 224, .1], a = w.a;
   const c = mixc(gc, t, .55 * a);
   return [c[0], c[1], c[2], gc[3] + t[3] * a];
 }
