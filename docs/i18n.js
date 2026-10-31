@@ -114,7 +114,11 @@
     'Arkadaşlarını çağır': 'Invite friends',
     'Arkadaşına meydan oku': 'Challenge a friend',
     'Meydan okumayı kapat': 'Close the challenge',
-    'Herkes aynı bardaklarla': 'Same glasses for everyone'
+    'Herkes aynı bardaklarla': 'Same glasses for everyone',
+    'Hedefe {n} puan kaldı!': '{n} more points to beat the target!',
+    'Rövanşa çağır': 'Ask for a rematch', 'Meydan okumayı kabul et': 'Accept the challenge',
+    'Arkadaşların link gönderdikçe tablo güncellenir.': 'The table updates as friends send their links.',
+    'Arkadaşlarını çağır, linki açınca tabloya girerler.': 'Invite friends; they join the table when they open the link.'
   };
   var lang = null;
   try { lang = localStorage.getItem('ck_lang'); } catch (e) {}

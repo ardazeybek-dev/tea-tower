@@ -998,6 +998,7 @@ const Snd = (() => {
     ambience();
     warmStrings();
     setInterval(music, 90);   // rAF'tan değil: başlık 30, mola 10 fps çizer, notalar takılmasın
+    levels();
   }
   // kaydırıcı 0-1, kulak kareyi daha doğal duyar
   const sfxGain = () => SET.sfx ? SET.sfxV * SET.sfxV : 0;
@@ -1739,7 +1740,7 @@ function endGame() {
     // meydan okumada rozet hedefi anlatır, kişisel rekor ikinci planda
     const won = G.score > G.ch.target, prize = won ? chReward() : 0;
     if (won) G.ch.done = true;
-    $('recordBadge').textContent = won ? tr('Meydan okumayı kazandın!') + (prize ? ` +${prize}` : '') : `${tr('Hedefe')} ${G.ch.target + 1 - G.score} ${tr('puan kaldı!')}`;
+    $('recordBadge').textContent = won ? tr('Meydan okumayı kazandın!') + (prize ? ` +${prize}` : '') : tr('Hedefe {n} puan kaldı!').replace('{n}', G.ch.target + 1 - G.score);
     $('recordBadge').classList.toggle('near', !won); show('recordBadge', true);
     $('overMode').textContent = `${tr('Meydan okuma')} · ${tr('Hedef')} ${G.ch.target}`; show('overMode', true);
     if (won) rec = true;
