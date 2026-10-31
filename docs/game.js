@@ -26,7 +26,7 @@ const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], 
 const shade = (c, k) => k >= 0 ? mixc(c, [255, 240, 220], k) : mixc(c, [20, 4, 2], -k);
 function mk(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; }
 // portal sürümünde çeviri (platform.js yoksa metin aynen kalır)
-const tr = (s) => (window.PF && window.PF.t ? window.PF.t(s) : s);
+const tr = (s) => (window.I18N ? window.I18N.t(s) : s);
 
 // ------------------------------------------------------------------ constants (world units, y up)
 const PH = 100;          // bir set (tabak+bardak) yüksekliği
@@ -39,12 +39,12 @@ const HC = 78;           // askıdaki setin kule tepesine boşluğu
 const TEA = [hex('#7c190b'), hex('#a3301a'), hex('#b8461f'), hex('#c45c26')];
 
 const PHASES = [
-  { name: 'İkindi', skyTop: '#a3b3cc', skyMid: '#e2c6aa', skyBot: '#f6ddb8', sun: '#fff6e0', glow: '#ffd7a0', far: '#bba595', city: '#6e5656', sea: '#a99c98', seaDeep: '#55606e', shimmer: '#fff0cc', cloud: '#fff3e4', bird: '#4a3838', grade: [255, 220, 184, .12], stars: 0, night: 0, sx: .74, sy: .40, sr: 26 },
-  { name: 'Gün batımı', skyTop: '#5f6aa6', skyMid: '#b48fbf', skyBot: '#f6b9a2', sun: '#fff0d2', glow: '#ffb898', far: '#b58aa2', city: '#5a4262', sea: '#8c7096', seaDeep: '#3f3a66', shimmer: '#ffd6b8', cloud: '#f6c8bc', bird: '#2e2236', grade: [240, 192, 204, .18], stars: .25, night: .5, sx: .7, sy: .535, sr: 36 },
-  { name: 'Gece', skyTop: '#0c1429', skyMid: '#1d2b4e', skyBot: '#3a4a72', sun: '#f4f1e6', glow: '#a9b8e0', far: '#26314f', city: '#0e1425', sea: '#18233d', seaDeep: '#0b1223', shimmer: '#d4dcff', cloud: '#3e4a6c', bird: '#c8d0ee', grade: [128, 148, 204, .4], stars: 1, night: 1, sx: .26, sy: .2, sr: 19 },
-  { name: 'Şafak', skyTop: '#3e4c7a', skyMid: '#9d8baa', skyBot: '#f2c6b2', sun: '#ffe8d2', glow: '#ffc2aa', far: '#8f88a2', city: '#433c58', sea: '#7c7a9a', seaDeep: '#3c3c62', shimmer: '#ffd8c8', cloud: '#f2d2ca', bird: '#2a2440', grade: [222, 196, 222, .2], stars: .35, night: .55, sx: .24, sy: .52, sr: 30 },
-  { name: 'Sabah', skyTop: '#86afd2', skyMid: '#bdd3e2', skyBot: '#efe6d8', sun: '#fffaf0', glow: '#fff0d2', far: '#aebcc7', city: '#6e8292', sea: '#7da2b5', seaDeep: '#3f6a84', shimmer: '#ffffff', cloud: '#ffffff', bird: '#3a4a5a', grade: [255, 244, 234, .07], stars: 0, night: 0, sx: .3, sy: .33, sr: 24 },
-  { name: 'Öğle', skyTop: '#6399c6', skyMid: '#9fc3dd', skyBot: '#e3ecea', sun: '#ffffff', glow: '#fffae6', far: '#a4b7c3', city: '#5d7482', sea: '#4f8ba6', seaDeep: '#2b6280', shimmer: '#ffffff', cloud: '#ffffff', bird: '#33424e', grade: [255, 250, 240, .05], stars: 0, night: 0, sx: .62, sy: .15, sr: 22 },
+  { name: tr('İkindi'), skyTop: '#a3b3cc', skyMid: '#e2c6aa', skyBot: '#f6ddb8', sun: '#fff6e0', glow: '#ffd7a0', far: '#bba595', city: '#6e5656', sea: '#a99c98', seaDeep: '#55606e', shimmer: '#fff0cc', cloud: '#fff3e4', bird: '#4a3838', grade: [255, 220, 184, .12], stars: 0, night: 0, sx: .74, sy: .40, sr: 26 },
+  { name: tr('Gün batımı'), skyTop: '#5f6aa6', skyMid: '#b48fbf', skyBot: '#f6b9a2', sun: '#fff0d2', glow: '#ffb898', far: '#b58aa2', city: '#5a4262', sea: '#8c7096', seaDeep: '#3f3a66', shimmer: '#ffd6b8', cloud: '#f6c8bc', bird: '#2e2236', grade: [240, 192, 204, .18], stars: .25, night: .5, sx: .7, sy: .535, sr: 36 },
+  { name: tr('Gece'), skyTop: '#0c1429', skyMid: '#1d2b4e', skyBot: '#3a4a72', sun: '#f4f1e6', glow: '#a9b8e0', far: '#26314f', city: '#0e1425', sea: '#18233d', seaDeep: '#0b1223', shimmer: '#d4dcff', cloud: '#3e4a6c', bird: '#c8d0ee', grade: [128, 148, 204, .4], stars: 1, night: 1, sx: .26, sy: .2, sr: 19 },
+  { name: tr('Şafak'), skyTop: '#3e4c7a', skyMid: '#9d8baa', skyBot: '#f2c6b2', sun: '#ffe8d2', glow: '#ffc2aa', far: '#8f88a2', city: '#433c58', sea: '#7c7a9a', seaDeep: '#3c3c62', shimmer: '#ffd8c8', cloud: '#f2d2ca', bird: '#2a2440', grade: [222, 196, 222, .2], stars: .35, night: .55, sx: .24, sy: .52, sr: 30 },
+  { name: tr('Sabah'), skyTop: '#86afd2', skyMid: '#bdd3e2', skyBot: '#efe6d8', sun: '#fffaf0', glow: '#fff0d2', far: '#aebcc7', city: '#6e8292', sea: '#7da2b5', seaDeep: '#3f6a84', shimmer: '#ffffff', cloud: '#ffffff', bird: '#3a4a5a', grade: [255, 244, 234, .07], stars: 0, night: 0, sx: .3, sy: .33, sr: 24 },
+  { name: tr('Öğle'), skyTop: '#6399c6', skyMid: '#9fc3dd', skyBot: '#e3ecea', sun: '#ffffff', glow: '#fffae6', far: '#a4b7c3', city: '#5d7482', sea: '#4f8ba6', seaDeep: '#2b6280', shimmer: '#ffffff', cloud: '#ffffff', bird: '#33424e', grade: [255, 250, 240, .05], stars: 0, night: 0, sx: .62, sy: .15, sr: 22 },
 ].map((p) => {
   const o = { ...p };
   for (const k of ['skyTop', 'skyMid', 'skyBot', 'sun', 'glow', 'far', 'city', 'sea', 'seaDeep', 'shimmer', 'cloud', 'bird']) o[k] = hex(p[k]);
@@ -1590,8 +1590,8 @@ function land() {
     G.zk = Math.max(G.zk, (d.spec.golden ? .03 : .012) + Math.min(G.combo, 10) * .002);
     G.trauma = Math.min(1, G.trauma + (d.spec.golden ? .2 : .1));
     vibrate(G.combo >= 3 ? [12, 30, 12] : 10);
-    floater(piece.tx, ty + PH + 26, G.combo > 1 ? `Mükemmel ×${G.combo}` : 'Mükemmel', '#fff1c4', 30);
-    if (G.combo >= 3 && G.combo % 3 === 0) floater(piece.tx, ty + PH + 64, 'Denge!', '#ffd27a', 20, true);
+    floater(piece.tx, ty + PH + 26, G.combo > 1 ? `${tr('Mükemmel')} ×${G.combo}` : tr('Mükemmel'), '#fff1c4', 30);
+    if (G.combo >= 3 && G.combo % 3 === 0) floater(piece.tx, ty + PH + 64, tr('Denge!'), '#ffd27a', 20, true);
     if (d.spec.hot) { G.runSugar += EV_HOT; Wallet.add(EV_HOT); floater(piece.tx - 74, ty + PH - 10, `${tr('Sıcak çay')} +${EV_HOT}`, '#ffd2a8', 20, true); }
   } else {
     G.combo = 0;
@@ -1611,11 +1611,11 @@ function land() {
   misEvent('height', G.pieces.length); misEvent('combo', G.combo);
   ST.bestH = Math.max(ST.bestH, G.pieces.length); ST.bestCombo = Math.max(ST.bestCombo, G.combo); ST.bestScore = Math.max(ST.bestScore, G.score);
   saveStats(); checkAch();
-  ui.score(G.score, true); ui.combo(G.combo >= 2 ? `Kombo ×${G.combo}` : '');
+  ui.score(G.score, true); ui.combo(G.combo >= 2 ? `${tr('Kombo')} ×${G.combo}` : '');
   // risk uyarısı
   const st2 = stability();
   G.risk = st2.risk;
-  if (G.risk > .72 && !G.warned) { G.warned = true; Snd.creak(); floater(topX(), topY() + 120, 'Dikkat, sallanıyor!', '#ffb4a0', 20); }
+  if (G.risk > .72 && !G.warned) { G.warned = true; Snd.creak(); floater(topX(), topY() + 120, tr('Dikkat, sallanıyor!'), '#ffb4a0', 20); }
   if (G.risk < .5) G.warned = false;
   // rekor yüksekliği geçildi: hafif kutlama (puan rekorunun konfetisiyle yarışmasın)
   const h = G.pieces.length;
@@ -1637,7 +1637,7 @@ function land() {
   }
   // rekor
   if (G.best > 0 && G.score > G.best && !G.recordShown) {
-    G.recordShown = true; slowMo = .55; Snd.record(); floater(topX(), topY() + 160, 'Yeni rekor!', '#ffe08a', 30); confetti(30);
+    G.recordShown = true; slowMo = .55; Snd.record(); floater(topX(), topY() + 160, tr('Yeni rekor!'), '#ffe08a', 30); confetti(30);
   }
   // evre
   const ph = (G.ph0 + Math.floor(G.pieces.length / PHASE_LEN)) % PHASES.length;
@@ -1720,9 +1720,9 @@ function endGame() {
   $('finalScore').textContent = G.score;
   $('statBest').textContent = daily ? Math.max(G.score, G.prevBest) : G.best; $('statPerfect').textContent = G.perfects; $('statCombo').textContent = G.maxCombo;
   $('statBestLbl').textContent = tr(daily ? 'Bugün' : 'En iyi');
-  $('overReason').textContent = G.single ? 'Bardak kaydı' : 'Kule devrildi';
+  $('overReason').textContent = tr(G.single ? 'Bardak kaydı' : 'Kule devrildi');
   const firstRun = G.prevBest === 0;
-  $('recordBadge').textContent = firstRun ? 'İlk kulen!' : 'Yeni rekor!';
+  $('recordBadge').textContent = tr(firstRun ? 'İlk kulen!' : 'Yeni rekor!');
   if (daily) $('recordBadge').textContent = tr('Günün rekoru!');
   // rekora az kaldıysa aynı rozette, sakin renkte söyle
   const gap = G.prevBest - G.score, near = !rec && G.score > 0 && gap > 0 && gap <= Math.max(3, Math.ceil(G.prevBest * .2));
@@ -1893,6 +1893,8 @@ function renderSet() {
   });
   document.querySelectorAll('#gfxSeg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === SET.gfx ? 'true' : 'false'));
   $('gfxNote').textContent = tr(GFX_NOTE[SET.gfx]);
+  document.querySelectorAll('#langSeg button').forEach((b) => b.setAttribute('aria-pressed', window.I18N && b.dataset.v === I18N.lang ? 'true' : 'false'));
+  show('langRow', !!window.I18N && G.state !== 'paused');   // dil değişimi sayfayı yeniler: elin ortasında sunulmaz
   $('tutNote').textContent = tr(G.tutorial ? 'Bir sonraki elde gösterilecek' : 'Bir sonraki elde ipucu');
   show('vibRow', !!navigator.vibrate);
 }
@@ -2052,7 +2054,7 @@ function applyVenue() {
 function renderGift() {
   const ls = loginState(), box = $('days'); box.textContent = '';
   const dn = Math.max(1, ls.claimed ? ls.n : ls.n + 1);
-  $('loginTitle').textContent = window.PF && window.PF.lang === 'en' ? `Day ${dn}` : `${dn}. gün`;
+  $('loginTitle').textContent = window.I18N && I18N.lang === 'en' ? `Day ${dn}` : `${dn}. gün`;
   GIFT.forEach((r, i) => {
     const el = document.createElement('div');
     const done = i < ls.slot || (ls.claimed && i === ls.slot);
@@ -3106,7 +3108,7 @@ function render() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = `600 12px Nunito, sans-serif`; ctx.fillStyle = 'rgba(255,236,200,0.85)';
     const ty = 152 + (1 - easeOutCubic(clamp(b.t / .5, 0, 1))) * 10;
-    ctx.fillText('V A K İ T', W / 2, ty);
+    ctx.fillText(tr('V A K İ T'), W / 2, ty);
     ctx.font = `italic 600 24px Fraunces, Georgia, serif`; ctx.fillStyle = '#fff6e6';
     ctx.fillText(b.text, W / 2, ty + 24);
     ctx.globalAlpha = 1;
@@ -3215,6 +3217,7 @@ $('setBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); 
 $('setBtnP').addEventListener('click', (e) => { e.stopPropagation(); Snd.click(); openPanel('set'); });
 document.querySelectorAll('.set-row[data-k]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); if (G.state !== 'paused') Snd.init(); toggleSet(b.dataset.k); }));
 document.querySelectorAll('#gfxSeg button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); setGfx(b.dataset.v); }));
+document.querySelectorAll('#langSeg button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); if (!window.I18N || G.state === 'paused' || b.dataset.v === I18N.lang) return; Snd.click(); I18N.set(b.dataset.v); }));
 // kaydırıcı sesi ayarlar; hoparlöre dokunmak susturur, tekrar dokunmak kaydırıcıyı kaldığı yere geri getirir
 document.querySelectorAll('.set-vol').forEach((el) => {
   const k = el.dataset.v, inp = el.querySelector('input');

@@ -5,7 +5,7 @@
     python platform/build.py gamedistribution --gd-id <GAME_ID>
     python platform/build.py --zip <out_dir>      # also write <target>.zip files
 
-Output: platform/<target>/ (index.html, style.css, game.js, platform.js, fonts/).
+Output: platform/<target>/ (index.html, style.css, i18n.js, game.js, platform.js, fonts/).
 The service worker, manifest and absolute links are dropped: portals serve the game
 inside their own iframe and do not allow a PWA or links to other sites.
 """
@@ -41,19 +41,6 @@ def sub1(text, old, new, label):
 
 
 def patch_game(js):
-    # translation helper available to the whole engine
-    js = sub1(js, "'use strict';\n", "'use strict';\nconst T = (s) => (window.PF ? window.PF.t(s) : s);\n", "T helper")
-    for name in ["İkindi", "Gün batımı", "Gece", "Şafak", "Sabah", "Öğle"]:
-        js = sub1(js, f"name: '{name}'", f"name: T('{name}')", "phase " + name)
-    js = sub1(js, "`Mükemmel ×${G.combo}` : 'Mükemmel'", "`${T('Mükemmel')} ×${G.combo}` : T('Mükemmel')", "perfect")
-    js = sub1(js, "'Denge!'", "T('Denge!')", "balance")
-    js = sub1(js, "`Kombo ×${G.combo}`", "`${T('Kombo')} ×${G.combo}`", "combo")
-    js = sub1(js, "'Dikkat, sallanıyor!'", "T('Dikkat, sallanıyor!')", "warn")
-    js = sub1(js, "floater(topX(), topY() + 160, 'Yeni rekor!'", "floater(topX(), topY() + 160, T('Yeni rekor!')", "record floater")
-    js = sub1(js, "G.single ? 'Bardak kaydı' : 'Kule devrildi'", "T(G.single ? 'Bardak kaydı' : 'Kule devrildi')", "reason")
-    js = sub1(js, "firstRun ? 'İlk kulen!' : 'Yeni rekor!'", "T(firstRun ? 'İlk kulen!' : 'Yeni rekor!')", "badge")
-    js = sub1(js, "ctx.fillText('V A K İ T'", "ctx.fillText(T('V A K İ T')", "banner")
-
     # audio: a forced mute (ad playing / portal setting) that the in-game toggle cannot override
     js = sub1(js, "let muted = store.get('ck_mute', '0') === '1';",
               "let muted = store.get('ck_mute', '0') === '1', forced = false;", "forced var")
@@ -105,6 +92,7 @@ def patch_html(html, target):
     if not sw:
         raise SystemExit("patch 'service worker': not found")
     html = html.replace(sw.group(0), "<script>PF.translateDom(); PF.loaded();</script>\n")
+    html = sub1(html, '<script>I18N.translateDom();</script>\n', '', "pages translate")
     html = sub1(html, '<script src="game.js"></script>',
                 SDK_TAG[target] + '\n<script src="platform.js"></script>\n<script src="game.js"></script>', "scripts")
     allowed = ("https://sdk.crazygames.com/", "https://html5.api.gamedistribution.com/", "http://www.w3.org/")
@@ -122,6 +110,7 @@ def build(target, gd_id, zip_dir):
     for f in (DOCS / "fonts").iterdir():
         shutil.copy2(f, out / "fonts" / f.name)
     shutil.copy2(DOCS / "style.css", out / "style.css")
+    shutil.copy2(DOCS / "i18n.js", out / "i18n.js")
     (out / "game.js").write_text(patch_game((DOCS / "game.js").read_text("utf-8")), "utf-8")
     html = patch_html((DOCS / "index.html").read_text("utf-8"), target)
     if target == "gamedistribution" and gd_id:
