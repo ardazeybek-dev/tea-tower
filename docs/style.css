@@ -350,3 +350,8 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .wk-chip:active{transform:scale(.96)}
 .modes #weekBtn{display:none}
 @media (orientation:landscape) and (max-height:520px){.modes #weekBtn{display:flex}#title .chip-row{display:none}}
+
+.count{position:fixed;inset:0;z-index:40;display:grid;place-items:center;pointer-events:none;font-family:"Fraunces",Georgia,serif;font-weight:800;font-size:clamp(96px,30vmin,180px);color:#fff6e8;text-shadow:0 6px 30px rgba(60,15,5,.55),0 2px 0 rgba(150,50,20,.6)}
+.count.pop{animation:countPop .65s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes countPop{0%{transform:scale(1.8);opacity:0}25%{opacity:1}70%{transform:scale(1);opacity:1}100%{transform:scale(.85);opacity:0}}
+@media (prefers-reduced-motion:reduce){.count.pop{animation:none}}

@@ -96,6 +96,7 @@
   </div>
 </div>
 
+<div id="count" class="count hidden" aria-live="assertive"></div>
 <div id="pause" class="screen dim hidden">
   <div class="panel">
     <div class="eyebrow">Mola</div>
@@ -208,6 +209,17 @@
 <script>
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   window.addEventListener('load', function () { navigator.serviceWorker.register('./sw.js').catch(function () {}); });
+  // yeni sürüm devraldığında sayfa ana ekranda (ya da elin sonunda ana ekrana dönünce) kendini yeniler; telefon eski kodda kalmaz
+  var hadCtl = !!navigator.serviceWorker.controller, reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    if (!hadCtl) return;
+    (function go() {
+      if (reloading) return;
+      var g = window.__game;
+      if (g && (g.state !== 'title' || document.querySelector('.screen.dim:not(.hidden)'))) { setTimeout(go, 1500); return; }
+      reloading = true; location.reload();
+    })();
+  });
 }
 </script>
 </body>

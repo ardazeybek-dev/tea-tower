@@ -3064,12 +3064,26 @@ const ui = {
     if (gain && w && G.state === 'title') { w.classList.remove('gain'); void w.offsetWidth; w.classList.add('gain'); }
   },
 };
+let countTm = 0;
 function pause() {
+  // geri sayım sırasında sekme kapanırsa sayım iptal, mola ekranı geri gelir
+  if (G.state === 'paused' && countTm) { clearTimeout(countTm); countTm = 0; show('count', false); show('pause', true); Snd.suspend(); return; }
   if (G.state !== 'playing' && G.state !== 'toppling') return;
   G.prev = G.state; G.state = 'paused'; show('pause', true); Snd.suspend();
 }
+// moladan dönüş 3-2-1 ile: zamanlama oyununda bardak bir anda sallanmaya başlamasın
 function resume() {
-  if (G.state !== 'paused' || G.panel) return;
+  if (G.state !== 'paused' || G.panel || countTm) return;
+  show('pause', false); Snd.init();
+  const el = $('count');
+  const tick = (n) => {
+    if (n === 0) { countTm = 0; show('count', false); resumeNow(); return; }
+    el.textContent = n; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); show('count', true);
+    Snd.tick(); countTm = setTimeout(() => tick(n - 1), 650);
+  };
+  tick(3);
+}
+function resumeNow() {
   G.state = G.prev || 'playing'; show('pause', false); Snd.init(); Snd.resume(); last = performance.now();
 }
 function goHome() {
@@ -3267,7 +3281,7 @@ refreshTitle();
 demoTower();
 // günün ilk açılışında hediye paneli kendiliğinden gelsin (meydan okuma linkiyle gelen önce onu görsün)
 if (G.wkOpen) setTimeout(() => openPanel('wk'), 700);
-else if (!loginState().claimed && !G.ch) setTimeout(() => openPanel('gift'), 700);
+else if (!loginState().claimed && !G.ch && store.get('ck_giftauto', '') !== dayKey()) { store.set('ck_giftauto', dayKey()); setTimeout(() => openPanel('gift'), 700); }
 G.cam.y = G.cam.ty = camMinY() - H * .07 / S; G.cam.x = 0;
 requestAnimationFrame(frame);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {});
