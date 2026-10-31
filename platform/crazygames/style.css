@@ -219,6 +219,21 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 .sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(60,20,10,.3);transition:transform .22s cubic-bezier(.3,1.4,.5,1)}
 .set-row[aria-checked="true"] .sw{background:linear-gradient(180deg,#c0452a,#9a2b17)}
 .set-row[aria-checked="true"] .sw::after{transform:translateX(18px)}
+.set-vol{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 14px 8px 8px;border-radius:16px;background:rgba(120,60,30,.07)}
+.set-vol label{flex:1;min-width:0}
+.set-vol b{display:block;font-size:15px;font-weight:900}
+.vol-ic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#9a2b17}
+.vol-ic:active{transform:scale(.94)}
+.spk{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spk path:first-child{fill:currentColor}
+.spk .x{display:none}
+.set-vol.off .spk .w{display:none}.set-vol.off .spk .x{display:block}.set-vol.off .vol-ic{color:rgba(42,29,46,.4)}
+.set-vol input{-webkit-appearance:none;appearance:none;width:100%;height:28px;margin:2px 0 0;background:transparent;touch-action:none;--p:60%}
+.set-vol input::-webkit-slider-runnable-track{height:6px;border-radius:9px;background:linear-gradient(90deg,#b23a22 var(--p),rgba(120,60,30,.2) var(--p))}
+.set-vol input::-moz-range-track{height:6px;border-radius:9px;background:linear-gradient(90deg,#b23a22 var(--p),rgba(120,60,30,.2) var(--p))}
+.set-vol input::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;margin-top:-9px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(60,20,10,.35);border:0}
+.set-vol input::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(60,20,10,.35);border:0}
+.set-vol.off input{opacity:.45}
 .set-gfx{padding:11px 14px 12px;border-radius:16px;background:rgba(120,60,30,.07)}
 .seg{display:flex;gap:4px;margin-top:9px;padding:3px;border-radius:12px;background:rgba(120,60,30,.1)}
 .seg button{flex:1;min-height:44px;padding:6px 4px;border-radius:9px;font-size:13px;font-weight:800;color:#7a3a28;transition:background .2s}

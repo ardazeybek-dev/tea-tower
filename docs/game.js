@@ -16,7 +16,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
 };
 // ayarlar: efekt/ortam sesi, titreşim, grafik kalitesi (auto | high | eco)
-const SET = (() => { const d = { sfx: true, amb: true, vib: true, gfx: 'auto' }; try { return Object.assign(d, JSON.parse(store.get('ck_set', '{}'))); } catch (e) { return d; } })();
+const SET = (() => { const d = { sfx: true, amb: true, vib: true, gfx: 'auto', mus: true, musV: .6, sfxV: 1 }; try { return Object.assign(d, JSON.parse(store.get('ck_set', '{}'))); } catch (e) { return d; } })();
 function saveSet() { store.set('ck_set', JSON.stringify(SET)); }
 const GFX_CAP = { auto: 2.5, high: 3, eco: 1.25 };
 const eco = () => SET.gfx === 'eco';
@@ -974,7 +974,7 @@ function tinted(m, color) {
 
 // ------------------------------------------------------------------ audio
 const Snd = (() => {
-  let ac = null, master = null, dry = null, verb = null, amb = null, sfx = null, ambBus = null;
+  let ac = null, master = null, dry = null, verb = null, amb = null, sfx = null, ambBus = null, mus = null, musLp = null;
   let muted = store.get('ck_mute', '0') === '1';
   const HICAZ = [0, 1, 4, 5, 7, 8, 10, 12, 13, 16, 17, 19, 20, 22, 24, 25, 28];
   function init() {
@@ -985,14 +985,153 @@ const Snd = (() => {
     const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
     master.connect(comp); comp.connect(ac.destination);
     // iki alt hat: efektler ve ortam (deniz, martı); ikisi de master'a bağlı, sessize alma hâlâ her şeyi keser
-    sfx = ac.createGain(); sfx.gain.value = SET.sfx ? 1 : 0; sfx.connect(master);
+    sfx = ac.createGain(); sfx.gain.value = sfxGain(); sfx.connect(master);
     ambBus = ac.createGain(); ambBus.gain.value = SET.amb ? 1 : 0; ambBus.connect(master);
     dry = ac.createGain(); dry.connect(sfx);
     verb = ac.createConvolver();
     const len = ac.sampleRate * 2.2, ir = ac.createBuffer(2, len, ac.sampleRate);
     for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
     verb.buffer = ir; const vg = ac.createGain(); vg.gain.value = .32; verb.connect(vg); vg.connect(sfx);
+    // müzik kendi hattında: master'a bağlı, yani sessize alma ve reklam susturması müziği de keser
+    musLp = ac.createBiquadFilter(); musLp.type = 'lowpass'; musLp.frequency.value = 9000;
+    mus = ac.createGain(); mus.gain.value = musGain(); mus.connect(musLp); musLp.connect(master);
     ambience();
+    warmStrings();
+    setInterval(music, 90);   // rAF'tan değil: başlık 30, mola 10 fps çizer, notalar takılmasın
+  }
+  // kaydırıcı 0-1, kulak kareyi daha doğal duyar
+  const sfxGain = () => SET.sfx ? SET.sfxV * SET.sfxV : 0;
+  const musGain = () => SET.mus ? .42 * SET.musV * SET.musV : 0;
+  function levels() {
+    if (!ac) return; const t = now();
+    sfx.gain.setTargetAtTime(sfxGain(), t, .03);
+    ambBus.gain.setTargetAtTime(SET.amb ? Math.max(.25, SET.sfx ? SET.sfxV : 0) : 0, t, .1);
+    mus.gain.setTargetAtTime(musGain(), t, .1);
+  }
+
+  // ---------------- müzik: çay bahçesi havası, Re Hicaz ----------------
+  // Saz (Karplus-Strong tel), uzun notada kanun tremolosu, B bölümünde ney, darbukada sofyan usulü (düm . tek-ke tek).
+  // Tam isabet tınıları da Re Hicaz'da (note()), ezgi onların bir oktav altında kalır. Kule yükseldikçe darbuka ve zil katılır.
+  const MOBILE = matchMedia('(pointer: coarse)').matches, AHEAD = MOBILE ? .5 : .3;
+  const S16 = 60 / 84 / 4, mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const MA = [
+    [[0, 69, 4], [4, 70, 2], [6, 69, 2], [8, 66, 4], [12, 67, 2], [14, 66, 2]],
+    [[0, 63, 4], [4, 66, 2], [6, 67, 2], [8, 69, 8]],
+    [[0, 72, 3], [3, 70, 1], [4, 69, 2], [6, 67, 2], [8, 66, 2], [10, 67, 2], [12, 69, 4]],
+    [[0, 67, 2], [2, 66, 2], [4, 63, 4], [8, 62, 8]],
+  ];
+  const MB = [
+    [[0, 74, 6], [6, 75, 2], [8, 74, 4], [12, 72, 4]],
+    [[0, 70, 4], [4, 72, 2], [6, 70, 2], [8, 69, 8]],
+    [[0, 69, 2], [2, 70, 2], [4, 72, 2], [6, 74, 2], [8, 75, 4], [12, 74, 4]],
+    [[0, 72, 2], [2, 70, 2], [4, 69, 2], [6, 67, 2], [8, 66, 4], [12, 62, 4]],
+  ];
+  const ROOT_A = [38, 38, 43, 38], ROOT_B = [38, 43, 38, 38];
+  const FORM = [['A', 0], ['A', 12], ['B', 0], ['A', 0], ['brk', 0]];
+  const BARS = FORM.map(([k]) => (k === 'brk' ? 1 : 4)), TOTAL = BARS.reduce((a, b) => a + b, 0);
+  function where(bar) {
+    let b = bar % TOTAL;
+    for (let i = 0; i < FORM.length; i++) { if (b < BARS[i]) return { sec: FORM[i][0], oct: FORM[i][1], i: b }; b -= BARS[i]; }
+  }
+  const ks = new Map();
+  function ksBuf(m) {
+    if (ks.has(m)) return ks.get(m);
+    const sr = ac.sampleRate, n = Math.round(sr * 1.3), N = Math.max(2, Math.round(sr / mtof(m) - .5));
+    const buf = ac.createBuffer(1, n, sr), d = buf.getChannelData(0), ring = new Float32Array(N);
+    for (let i = 0; i < N; i++) ring[i] = Math.random() * 2 - 1;
+    const decay = m > 70 ? .994 : .997;
+    let idx = 0, peak = 0;
+    for (let i = 0; i < n; i++) {
+      const a = ring[idx], b = ring[(idx + 1) % N];
+      d[i] = a; peak = Math.max(peak, Math.abs(a));
+      ring[idx] = (a * .55 + b * .45) * decay;
+      idx = (idx + 1) % N;
+    }
+    for (let i = 0; i < n; i++) d[i] /= peak;
+    ks.set(m, buf); return buf;
+  }
+  // teller açılışta parça parça üretilir: çalarken üretim ana iş parçacığını takmasın
+  function warmStrings() {
+    const set = new Set([50]);
+    for (const r of [...ROOT_A, ...ROOT_B]) [0, 7, 12].forEach((d) => set.add(r + d));
+    for (const bar of MA) for (const [, m] of bar) { set.add(m); set.add(m + 12); }
+    for (const bar of MB) for (const [, m] of bar) set.add(m - 12);
+    const list = [...set];
+    const next = () => { if (!list.length) return; ksBuf(list.pop()); setTimeout(next, 16); };
+    setTimeout(next, 60);
+  }
+  function pluck(m, t, vol, dur, pan) {
+    const s = ac.createBufferSource(), g = ac.createGain();
+    s.buffer = ksBuf(m);
+    g.gain.setValueAtTime(vol, t); g.gain.setTargetAtTime(.0001, t + dur * .5, dur * .3);
+    let out = g;
+    if (pan && !MOBILE && ac.createStereoPanner) { const p = ac.createStereoPanner(); p.pan.value = pan; g.connect(p); out = p; }
+    s.connect(g); out.connect(mus); s.start(t); s.stop(t + dur + .4);
+  }
+  function mtone(f, vol, dur, type, t, attack, f1) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    env(g, t, attack, vol, dur); o.connect(g); g.connect(mus); o.start(t); o.stop(t + attack + dur + .05);
+  }
+  function mhiss(dur, vol, f, type, t, q) {
+    if (!noiseBuf) { noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+    const s = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain();
+    s.buffer = noiseBuf; fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+    env(g, t, .004, vol, dur); s.connect(fl); fl.connect(g); g.connect(mus); s.start(t, Math.random()); s.stop(t + dur + .05);
+  }
+  function ney(m, t, dur, vol) {
+    const f = mtof(m), g = ac.createGain(), o = ac.createOscillator(), o2 = ac.createOscillator();
+    const vib = ac.createOscillator(), vg = ac.createGain(), lp = ac.createBiquadFilter(), g2 = ac.createGain();
+    o.type = 'sine'; o2.type = 'triangle'; o.frequency.value = f; o2.frequency.value = f * 2;
+    vib.frequency.value = 5; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * .006, t + Math.min(dur, .5));
+    vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);
+    lp.type = 'lowpass'; lp.frequency.value = 2200; g2.gain.value = .16;
+    o.connect(lp); o2.connect(g2); g2.connect(lp); lp.connect(g);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .14);
+    g.gain.setValueAtTime(vol, t + dur * .8); g.gain.exponentialRampToValueAtTime(.0001, t + dur + .2);
+    g.connect(mus);
+    for (const x of [o, o2, vib]) { x.start(t); x.stop(t + dur + .25); }
+    mhiss(Math.min(dur, .4), vol * .3, f * 2, 'bandpass', t, 2);
+  }
+  const dum = (t, v) => { mtone(96, .3 * v, .22, 'sine', t, .003, 50); mhiss(.06, .07 * v, 260, 'lowpass', t, 1); };
+  const tek = (t, v) => { mhiss(.05, .14 * v, 3400, 'bandpass', t, 1.4); mtone(1650, .03 * v, .03, 'triangle', t, .002); };
+  const zil = (t, v) => mhiss(.14, .045 * v, 9000, 'highpass', t, 1);
+  let nextNote = 0, step = 0, lpLow = false;
+  function music() {
+    if (!ac || muted || !SET.mus || ac.state !== 'running') { nextNote = 0; return; }
+    // kule devrilirken ve oyun sonunda müzik boğuklaşır, yeni elde açılır
+    const low = G.state === 'over' || G.state === 'toppling';
+    if (low !== lpLow) { lpLow = low; musLp.frequency.setTargetAtTime(low ? 650 : 9000, now(), low ? .12 : .6); }
+    const hot = G.state === 'playing' ? clamp(G.pieces.length / 40, 0, 1) : 0, calm = G.state === 'title';
+    if (nextNote < now()) nextNote = now() + .06;
+    while (nextNote < now() + AHEAD) {
+      const bar = Math.floor(step / 16), s = step % 16, t = nextNote;
+      const w = where(bar), sec = w.sec;
+      // sofyan: düm . . . . . . . tek . ke . tek . . . ; başlıkta yalnızca yumuşak düm
+      if (s === 0) dum(t, calm ? .55 : 1);
+      else if (!calm && s === 8) tek(t, 1);
+      else if (!calm && s === 10) tek(t, .45);
+      else if (!calm && s === 12) tek(t, .8);
+      else if (!calm && hot > .45 && (s === 14 || s === 6) && (hot > .7 || bar % 2)) tek(t, .3);
+      if (hot > .55 && s === 4) zil(t, .5 + hot * .5);
+      if (sec === 'brk') { if (s === 0) pluck(50, t, .16, 1.8); nextNote += S16; step++; continue; }
+      const root = (sec === 'B' ? ROOT_B : ROOT_A)[w.i];
+      if (s === 0) pluck(root, t, .3, 1.3, -.15);
+      else if (s === 8) pluck(root + 7, t, .18, .8, -.15);
+      else if (s === 12 && hot > .25) pluck(root + 12, t, .14, .5, -.15);
+      if (s === 0) mtone(mtof(root + 12), .03, S16 * 15, 'sine', t, .5);
+      for (const [st, m0, len] of (sec === 'B' ? MB : MA)[w.i]) {
+        if (st !== s) continue;
+        const m = m0 + w.oct;
+        if (sec === 'B') { ney(m, t, len * S16 * .95, .065); if (len >= 2) pluck(m - 12, t, .1, .6, .35); }
+        else {
+          pluck(m, t, .22, Math.max(.4, len * S16 * 1.5), .2);
+          if (len >= 4) for (let k = 1; k < len; k++) pluck(m, t + k * S16, .07, .25, -.25);   // kanun tremolosu
+          if (w.oct) pluck(m - 12, t + .012, .1, .5, -.2);
+        }
+      }
+      nextNote += S16; step++;
+    }
   }
   const now = () => ac.currentTime;
   function env(g, t, a, peak, dec) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec); }
@@ -1063,7 +1202,7 @@ const Snd = (() => {
     init,
     get muted() { return muted; },
     toggle() { muted = !muted; store.set('ck_mute', muted ? '1' : '0'); if (master) master.gain.setTargetAtTime(muted ? 0 : .9, now(), .05); return muted; },
-    bus(k, on) { const b = k === 'amb' ? ambBus : sfx; if (b) b.gain.setTargetAtTime(on ? 1 : 0, now(), .05); },
+    bus() { levels(); },
     setScene,
     suspend() { if (ac && ac.state === 'running') ac.suspend().catch(() => {}); },
     resume() { if (ac && ac.state === 'suspended') ac.resume().catch(() => {}); },
@@ -1746,6 +1885,12 @@ function closePanel() {
 const GFX_NOTE = { eco: 'Daha az efekt, daha uzun pil', auto: 'Cihaza göre kendini ayarlar', high: 'En keskin görüntü' };
 function renderSet() {
   document.querySelectorAll('.set-row[data-k]').forEach((el) => el.setAttribute('aria-checked', SET[el.dataset.k] ? 'true' : 'false'));
+  document.querySelectorAll('.set-vol').forEach((el) => {
+    const k = el.dataset.v, inp = el.querySelector('input'), v = Math.round(SET[k + 'V'] * 100);
+    el.classList.toggle('off', !SET[k]);
+    if (document.activeElement !== inp) inp.value = v;
+    inp.style.setProperty('--p', inp.value + '%');
+  });
   document.querySelectorAll('#gfxSeg button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === SET.gfx ? 'true' : 'false'));
   $('gfxNote').textContent = tr(GFX_NOTE[SET.gfx]);
   $('tutNote').textContent = tr(G.tutorial ? 'Bir sonraki elde gösterilecek' : 'Bir sonraki elde ipucu');
@@ -2985,6 +3130,22 @@ $('setBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); 
 $('setBtnP').addEventListener('click', (e) => { e.stopPropagation(); Snd.click(); openPanel('set'); });
 document.querySelectorAll('.set-row[data-k]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); if (G.state !== 'paused') Snd.init(); toggleSet(b.dataset.k); }));
 document.querySelectorAll('#gfxSeg button').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); setGfx(b.dataset.v); }));
+// kaydırıcı sesi ayarlar; hoparlöre dokunmak susturur, tekrar dokunmak kaydırıcıyı kaldığı yere geri getirir
+document.querySelectorAll('.set-vol').forEach((el) => {
+  const k = el.dataset.v, inp = el.querySelector('input');
+  inp.addEventListener('input', () => {
+    const v = +inp.value / 100; SET[k + 'V'] = v; SET[k] = v > 0;
+    inp.style.setProperty('--p', inp.value + '%'); el.classList.toggle('off', !SET[k]);
+    Snd.bus();
+  });
+  inp.addEventListener('change', () => { if (SET[k + 'V'] > 0) SET[k + 'V'] = Math.max(.05, SET[k + 'V']); saveSet(); if (k === 'sfx') Snd.click(); });
+  for (const ev of ['pointerdown', 'click']) inp.addEventListener(ev, (e) => e.stopPropagation());
+  el.querySelector('.vol-ic').addEventListener('click', (e) => {
+    e.stopPropagation(); if (G.state !== 'paused') Snd.init();
+    SET[k] = !SET[k]; if (SET[k] && SET[k + 'V'] < .05) SET[k + 'V'] = k === 'mus' ? .6 : 1;
+    saveSet(); Snd.bus(); Snd.click(); renderSet();
+  });
+});
 $('tutBtn').addEventListener('click', (e) => { e.stopPropagation(); G.tutorial = true; G.tutDone = 0; store.set('ck_tut', '0'); Snd.click(); renderSet(); });
 for (const id of ['cupsClose', 'giftClose', 'achClose', 'setClose', 'wkClose']) $(id).addEventListener('click', (e) => { e.stopPropagation(); closePanel(); });
 $('claimBtn').addEventListener('click', (e) => { e.stopPropagation(); Snd.init(); claimGift(); });

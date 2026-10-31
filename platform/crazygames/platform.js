@@ -67,7 +67,8 @@
     'Günlük çayı oyna': 'Play the Daily tea',
     // ayarlar
     'Ayarlar': 'Settings', 'Tercihler': 'Preferences', 'Ses efektleri': 'Sound effects', 'Bardak, kombo, devrilme': 'Glasses, combos, crashes',
-    'Ortam sesi': 'Ambience', 'Dalga, rüzgâr, kuşlar': 'Waves, wind, birds', 'Titreşim': 'Vibration', 'Dokunuşta hafif titreşim': 'A light buzz on taps',
+    'Müzik': 'Music', 'Müzik sesi': 'Music volume', 'Efekt sesi': 'Effects volume',
+  'Ortam sesi': 'Ambience', 'Dalga, rüzgâr, kuşlar': 'Waves, wind, birds', 'Titreşim': 'Vibration', 'Dokunuşta hafif titreşim': 'A light buzz on taps',
     'Grafik': 'Graphics', 'Pil dostu': 'Battery saver', 'Otomatik': 'Auto', 'Yüksek': 'High',
     'Daha az efekt, daha uzun pil': 'Fewer effects, longer battery', 'Cihaza göre kendini ayarlar': 'Adjusts to your device', 'En keskin görüntü': 'The sharpest picture',
     'Öğreticiyi göster': 'Show the tutorial', 'Bir sonraki elde ipucu': 'A hint on your next run', 'Bir sonraki elde gösterilecek': 'It will show on your next run',
