@@ -1285,7 +1285,11 @@ function addXp(k) {
 let rng = Math.random;   // oyun akışı rastgeleliği (günlük modda tohumlu)
 
 // ------------------------------------------------------------------ günlük çay
-function dayKey(d) { d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+// argümansız çağrı her karede (hava durumu) gelir: bir saniye önbellekte tutulur
+const DK = { t: -1e9, k: '' };
+function dayKey(d) {
+  if (!d) { const n = Date.now(); if (n - DK.t < 1000 && n >= DK.t) return DK.k; DK.t = n; return (DK.k = dayKey(new Date(n))); }
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function dailyToday() {
   const key = dayKey(), num = +key.replace(/-/g, '');
   const r = seeded(num); r(); r();
@@ -2543,13 +2547,15 @@ function drawBackground(P) {
   const sa = clamp(P.stars + alt * .5, 0, 1);
   if (sa > .02) {
     const sstep = eco() ? 2 : 1;
+    ctx.fillStyle = 'rgb(255,250,235)';
     for (let si = 0; si < BG.stars.length; si += sstep) {
       const s = BG.stars[si];
       const tw = .55 + .45 * Math.sin(G.t * 1.7 + s[3]);
-      ctx.fillStyle = `rgba(255,250,235,${sa * tw * .9})`;
+      ctx.globalAlpha = sa * tw * .9;
       const y = (s[1] * H + rise * .05) % H;
       ctx.fillRect(s[0] * W, y, s[2], s[2]);
     }
+    ctx.globalAlpha = 1;
   }
   // güneş / ay
   const sx = P.sx * W + hx * .3, sy = P.sy * H + rise * .12, sr = P.sr * S;
@@ -2589,9 +2595,11 @@ function drawBackground(P) {
       const ws = 1.2 * S, gs = 9 * S, glow = !eco();
       for (const w of BG.wins) {
         const f = .6 + .4 * Math.sin(G.t * .7 + w[2] * 30), wx = ox + w[0] / DPR, wy = ty + w[1] / DPR;
-        ctx.fillStyle = `rgba(255,${210 + w[2] * 40 | 0},140,${nt * f * (w[2] > .3 ? .95 : .4)})`;
+        if (!w[3]) w[3] = `rgb(255,${210 + w[2] * 40 | 0},140)`;
+        ctx.fillStyle = w[3]; ctx.globalAlpha = nt * f * (w[2] > .3 ? .95 : .4);
         ctx.fillRect(wx, wy, ws, ws);
       }
+      ctx.globalAlpha = 1;
       if (glow) {
         // ışıltılar bir kez ufuk boyutunda tuvale basılır, her karede tek çizim
         if (!BG.wg) {
@@ -2614,14 +2622,17 @@ function drawBackground(P) {
       ctx.globalAlpha = .4 * (1 - P.night * .35);
       ctx.drawImage(SUNL.c || SPR.soft, sx - pw * .9, hy - sr * .8, pw * 1.8, sr * 1.6);
       ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = rgb(mixc(P.shimmer, [255, 255, 255], .4));
       for (let i = 0; i < 46; i += shs) {
         const yy = hy + 3 + Math.pow(i / 46, 1.7) * pl;
         const spread = 6 + i * 1.6;
         const xx = sx + Math.sin(i * 12.9 + G.t * (.35 + (i % 5) * .12)) * spread;
         const a = (.35 + .45 * Math.sin(G.t * 1.1 + i * 1.7)) * (1 - i / 46) * (1 - P.night * .25);
-        ctx.fillStyle = rgb(mixc(P.shimmer, [255, 255, 255], .4), Math.max(0, a));
+        if (a <= 0) continue;
+        ctx.globalAlpha = a;
         ctx.fillRect(xx - (3 + i * .55) / 2, yy, 3 + i * .55, .6 + i * .02);
       }
+      ctx.globalAlpha = 1;
       // ufukta puslu gemi siluetleri: çok yavaş süzülür
       const shc = rgb(mixc(mixc(P.city, P.seaDeep, .3), hz, .55), .85), ss = S * .9;
       ctx.fillStyle = shc;
@@ -2701,7 +2712,7 @@ function worldTransform(shx, shy, rot) {
 }
 function drawSprite(sp, x, y) { ctx.drawImage(sp.c, x - sp.ox, y - sp.oy, sp.w, sp.h); }
 // yansıma yalnız tepedeki bardaklarda (kamera oraya bakar)
-let REFL = null, PT = PHASES[0], reflOn = true;
+let REFL = null, PT = PHASES[0], reflOn = true, REC = null;
 const SUN = { x: 0, y: 0 };
 function drawPiece(p, x, y, sq) {
   // x,y: tabak altı (ekran-aşağı koordinat)
@@ -2764,11 +2775,16 @@ function drawRecordLine() {
   ctx.beginPath(); ctx.moveTo(c.x - half, y); ctx.lineTo(c.x + half, y);
   ctx.strokeStyle = 'rgba(60,24,20,0.35)'; ctx.lineWidth = 6; ctx.stroke();
   ctx.strokeStyle = '#ffd77a'; ctx.lineWidth = 3; ctx.setLineDash([14, 9]); ctx.stroke(); ctx.setLineDash([]);
-  const txt = `${tr('Rekor')} · ${G.bestH0}`;
-  ctx.font = '800 15px Nunito, sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  const tw = ctx.measureText(txt).width, x = c.x + half - 14;
-  ctx.fillStyle = 'rgba(60,24,20,0.78)'; ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - tw - 12, y - 14, tw + 24, 28, 14) : ctx.rect(x - tw - 12, y - 14, tw + 24, 28); ctx.fill();
-  ctx.fillStyle = '#ffe2a8'; ctx.fillText(txt, x, y + 1);
+  const txt = `${tr('Rekor')} · ${G.bestH0}`, rs = DPR * S * 2;
+  if (!REC || REC.txt !== txt || REC.rs !== rs) {
+    const m = mk(1, 1).getContext('2d'); m.font = '800 15px Nunito, sans-serif';
+    const tw = m.measureText(txt).width, c2 = mk((tw + 28) * rs, 32 * rs), g = c2.getContext('2d');
+    g.scale(rs, rs); g.font = m.font; g.textAlign = 'right'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgba(60,24,20,0.78)'; g.beginPath(); g.roundRect ? g.roundRect(2, 2, tw + 24, 28, 14) : g.rect(2, 2, tw + 24, 28); g.fill();
+    g.fillStyle = '#ffe2a8'; g.fillText(txt, tw + 14, 17);
+    REC = { txt, rs, c: c2, w: tw + 28 };
+  }
+  ctx.drawImage(REC.c, c.x + half - REC.w, y - 16, REC.w, 32);
   ctx.globalAlpha = 1;
 }
 function drawSteam(x, y) {
@@ -3093,11 +3109,14 @@ function render() {
   for (const f of floaters) {
     const t = f.t / 1.3, e = easeOutCubic(Math.min(1, f.t / .35));
     ctx.globalAlpha = t < .7 ? 1 : 1 - (t - .7) / .3;
-    ctx.font = `700 ${f.size * (.7 + .3 * e)}px Fraunces, Georgia, serif`;
+    if (!f.font) f.font = `700 ${f.size}px Fraunces, Georgia, serif`;
+    if (ctx.font !== f.font) ctx.font = f.font;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const y = -f.y - t * 40;
-    ctx.fillStyle = 'rgba(60,16,20,0.35)'; ctx.fillText(f.text, f.x, y + 2);
-    ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, y);
+    const y = -f.y - t * 40, k = .7 + .3 * e;
+    ctx.save(); ctx.translate(f.x, y); ctx.scale(k, k);
+    ctx.fillStyle = 'rgba(60,16,20,0.35)'; ctx.fillText(f.text, 0, 2 / k);
+    ctx.fillStyle = f.color; ctx.fillText(f.text, 0, 0);
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
   // vinyet + evre başlığı

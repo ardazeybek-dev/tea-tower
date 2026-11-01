@@ -195,6 +195,10 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-
 #toast svg{width:18px;height:18px}
 #toast em{font-style:normal;color:#a8321c}
 @keyframes toast{0%{opacity:0;transform:translate(-50%,-14px)}12%,82%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-8px)}}
+/* oyun sırasında skor ve kombo yazısının altına iner, üstlerine binmez */
+body:has(#hud:not(.hidden)) #toast{top:calc(var(--sat) + 116px)}
+body:has(#hud:not(.hidden) #target:not(.hidden)) #toast{top:calc(var(--sat) + 144px)}
+@media (min-height:900px){body:has(#hud:not(.hidden)) #toast{top:calc(var(--sat) + 128px)}body:has(#hud:not(.hidden) #target:not(.hidden)) #toast{top:calc(var(--sat) + 156px)}}
 .cup .price{display:flex;align-items:center;gap:3px;justify-content:center}
 .cup .price svg{width:13px;height:13px}
 .cup.buy{background:linear-gradient(180deg,#6a4a3a,#4a2e24)}

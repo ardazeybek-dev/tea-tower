@@ -1,4 +1,4 @@
-const CACHE = 'cay-kulesi-v11';
+const CACHE = 'cay-kulesi-v12';
 const ASSETS = [
   './', './index.html', './style.css', './i18n.js', './game.js', './manifest.webmanifest',
   './fonts/fraunces-latin-wght-normal.woff2', './fonts/fraunces-latin-ext-wght-normal.woff2',
